@@ -33,7 +33,8 @@ library(ggpubr)
 library(ggsignif)
 library(GGally)
 library(kableExtra)
-#source("C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/Utilities")
+library(flextable)
+library(modelsummary)
 
 
 f_x <- 960 #fixation point x value
@@ -1038,6 +1039,10 @@ small_rsq_change
 
 aov_small<- anova(model_1_small,model_2_small, test = "F")
 aov_small
+
+small_frame_models<- list("Model 1" = model_1_small,
+                          "Model 2" = model_2_small)
+modelsummary(small_frame_models)
 ```
 
 - **Medium Frame**
@@ -1065,6 +1070,10 @@ medium_rsq_change
 
 aov_medium<- anova(model_1_medium,model_2_medium, test = "F")
 aov_medium
+
+medium_frame_models<- list("Model 1" = model_1_medium,
+                          "Model 2" = model_2_medium)
+modelsummary(medium_frame_models)
 ```
 
 - **Large Frame**
@@ -1091,6 +1100,10 @@ large_rsq_change
 
 aov_large<- anova(model_1_large,model_2_large, test = "F")
 aov_large
+
+large_frame_models<- list("Model 1" = model_1_large,
+                          "Model 2" = model_2_large)
+modelsummary(large_frame_models)
 ```
 
 - **Extra Large Frame**
@@ -1116,6 +1129,9 @@ xl_rsq_change
 aov_xl<- anova(model_1_xl,model_2_xl, test = "F")
 aov_xl
 
+xl_frame_models<- list("Model 1" = model_1_xl,
+                          "Model 2" = model_2_xl)
+modelsummary(xl_frame_models)
 ```
 
 
