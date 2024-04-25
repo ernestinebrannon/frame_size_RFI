@@ -692,12 +692,12 @@ s2r_880
 
 ```
 
-```{r s2r aov frame size effect}
-oc_mag_anova<- aov(frame_effect_r~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
-summary(oc_mag_anova)
-tukey_oc<-tukey_hsd(oc_mag_anova)
-apa_table(tukey_oc)
-```
+ ```{r s2r aov frame size effect}
+# oc_mag_anova<- aov(frame_effect_r~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
+# summary(oc_mag_anova)
+# tukey_oc<-tukey_hsd(oc_mag_anova)
+# apa_table(tukey_oc)
+ ```
 
 ```{r s2r within graph, echo=FALSE}
 
@@ -765,7 +765,7 @@ perc_x_s2r_df<- perc_x_s2r_df %>%
 
 ```
 
-```{r perc by rod 1, echo=FALSE}
+```{r perc by rod 1, echo=FALSE, warning=FALSE, message=FALSE}
 ggplot(perc_x_s2r_df)+
   aes(perception, s2r, color = frame_size)+
   geom_point(show.legend = FALSE)+
