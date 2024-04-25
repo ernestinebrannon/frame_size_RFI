@@ -1042,7 +1042,7 @@ aov_small
 
 small_frame_models<- list("Model 1" = model_1_small,
                           "Model 2" = model_2_small)
-modelsummary(small_frame_models)
+
 ```
 
 - **Medium Frame**
