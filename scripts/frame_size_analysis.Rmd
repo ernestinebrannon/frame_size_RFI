@@ -366,25 +366,25 @@ comb_sacc_perc_175<- across_frames %>%
   filter(frame_size == "Small")
 
 cor_comb_perc_175<- cor.test(comb_sacc_perc_175$perception,comb_sacc_perc_175$combined_saccade)
-
+cor_comb_perc_175
 #410
 comb_sacc_perc_410<- across_frames %>% 
   filter(frame_size == "Medium")
 
 cor_comb_perc_410<- cor.test(comb_sacc_perc_410$perception,comb_sacc_perc_410$combined_saccade)
-
+cor_comb_perc_410
 #645
 comb_sacc_perc_645<- across_frames %>% 
   filter(frame_size == "Large")
 
 cor_comb_perc_645<- cor.test(comb_sacc_perc_645$perception,comb_sacc_perc_645$combined_saccade)
-
+cor_comb_perc_645
 #880
 comb_sacc_perc_880<- across_frames %>% 
   filter(frame_size == "Extra Large")
 
 cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$combined_saccade)
-
+cor_comb_perc_880
 ```
 
 ### Perception Task: RFI
@@ -912,19 +912,19 @@ s2v_perc_175<- perc_x_s2v_df %>%
   filter(frame_size =="Small")
 
 cor_s2v_perc_175<- cor.test(s2v_perc_175$perception,s2v_perc_175$s2v)
-
+cor_s2v_perc_175
 
 #410
 s2v_perc_410<- perc_x_s2v_df %>% 
   filter(frame_size =="Medium")
 
 cor_s2v_perc_410<- cor.test(s2v_perc_410$perception,s2v_perc_410$s2v)
-
+cor_s2v_perc_410
 
 #645
 s2v_perc_645<- perc_x_s2v_df %>% 
   filter(frame_size == "Large")
-
+cor_s2v_perc_645
 cor_s2v_perc_645<- cor.test(s2v_perc_645$perception,s2v_perc_645$s2v)
 
 #880
@@ -932,7 +932,7 @@ s2v_perc_880<- perc_x_s2v_df %>%
   filter(frame_size == "Extra Large")
 
 cor_s2v_perc_880<- cor.test(s2v_perc_880$perception,s2v_perc_880$s2v)
-
+cor_s2v_perc_880
 ```
 
 **Perception and Saccade-to-Rod**
@@ -984,7 +984,7 @@ s2r_perc_175<- perc_x_s2r_df %>%
 
 cor_s2r_perc_175<- cor.test(s2r_perc_175$perception,s2r_perc_175$s2r)
 #report(cor_s2r_perc_175)
-
+cor_s2r_perc_175
 
 #410
 s2r_perc_410<- perc_x_s2r_df %>%
@@ -992,13 +992,14 @@ s2r_perc_410<- perc_x_s2r_df %>%
 
 cor_s2r_perc_410<- cor.test(s2r_perc_410$perception,s2r_perc_410$s2r)
 #report(cor_s2r_perc_410)
-
+cor_s2r_perc_410
 #645
 s2r_perc_645<- perc_x_s2r_df %>%
   filter(frame_size =="Large")
-
+cor_s2r_perc_645
 cor_s2r_perc_645<- cor.test(s2r_perc_645$perception,s2r_perc_645$s2r)
 #report(cor_s2r_perc_645)
+cor_s2r_perc_645
 
 #880
 s2r_perc_880<- perc_x_s2r_df %>%
@@ -1006,6 +1007,7 @@ s2r_perc_880<- perc_x_s2r_df %>%
 
 cor_s2r_perc_880<- cor.test(s2r_perc_880$perception,s2r_perc_880$s2r)
 #report(cor_s2r_perc_880)
+cor_s2r_perc_880
 
 
 ```
@@ -1030,8 +1032,9 @@ df_175_across<- df_small %>%
 #ggpairs(df_175_across)
 model_1_small<- lm(perc~vv, df_small)
 summary(model_1_small)
+
 model_2_small<- lm(perc~ vv +oc, df_small)
-summary(model_2_small)
+(model_2_small)
 
 #change in r squared
 small_rsq_change<- summary(model_2_small)$r.squared - summary(model_1_small)$r.squared
@@ -1042,6 +1045,8 @@ aov_small
 
 small_frame_models<- list("Model 1" = model_1_small,
                           "Model 2" = model_2_small)
+
+modelsummary(small_frame_models)
 
 ```
 
@@ -1059,10 +1064,10 @@ df_410_across<- df_medium %>%
 
 
 model_1_medium<- lm(perc~vv, df_medium)
-#summary(model_1_medium)
+summary(model_1_medium)
 
 model_2_medium<- lm(perc~ vv +oc, df_medium)
-#summary(model_2_medium)
+summary(model_2_medium)
 
 #change in r squared
 medium_rsq_change<- summary(model_2_medium)$r.squared - summary(model_1_medium)$r.squared
@@ -1090,9 +1095,10 @@ df_large_across<- df_large %>%
 
 
 model_1_large<- lm(perc~vv, df_large)
+summary(model_1_large)
 
 model_2_large<- lm(perc~ vv +oc, df_large)
-
+summary(model_2_large)
 #change in r squared
 large_rsq_change<- summary(model_2_large)$r.squared - summary(model_1_large)$r.squared
 large_rsq_change
@@ -1119,9 +1125,9 @@ df_xl_across<- df_xl %>%
 #ggpairs(df_880_across)
 
 model_1_xl<- lm(perc~vv, df_xl)
-
+summary(model_1_xl)
 model_2_xl<- lm(perc~ vv +oc, df_xl)
-
+summary(model_1_xl)
 #change in r squared
 xl_rsq_change<- summary(model_2_xl)$r.squared - summary(model_1_xl)$r.squared
 xl_rsq_change
