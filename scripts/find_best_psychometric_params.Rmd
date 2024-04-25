@@ -96,7 +96,6 @@ colnames(parDF) <- c("pse", "slope")
 
 ```
 
-
 ```{r PsyFun fit iteration checking, include=FALSE,echo=FALSE}
 
 # # # Initialize an empty data frame to store the results
@@ -182,7 +181,6 @@ write.csv(best_pars, "optimized_parameters")
 
 ```
 
-
 ```{r individual psychometric plots}
 Individual_curve_fit <- pse_fits %>% 
   group_by(sid,frame_orient,frame_size ) %>% 
@@ -203,8 +201,6 @@ ggplot()+
   geom_point(data = Individual_pts, aes(x,m_rsp))+
   labs( title = Individual_curve_fit$sid, subtitle = paste(Individual_curve_fit$frame_orient, " ", Individual_curve_fit$frame_size))
 ```
-
-
 
 ```{r individual RFI magnitude}
 
@@ -254,6 +250,7 @@ rfi_880_ttest<-t.test(individual_perc_df$rfi_880)
 report::report(rfi_880_ttest)
 
 ```
+
 ```{r}
 
 ```
@@ -316,7 +313,6 @@ for( subject in unique(p_data_clean$sid)){ #outermost for loop to iterate throug
 
 ```
 
-
 ```{r individual psychometric plots}
 #pse_subj<-bind_rows(all_pse_fits, .id = "column_label")
 
@@ -345,6 +341,7 @@ filter_subj<-pse_subj[5,]
     labs( title = Individual_curve_fit$sid, subtitle = paste(Individual_curve_fit$frame_orient, " ", Individual_curve_fit$frame_size))+
     facet_grid(frame_size~frame_orient) 
 ```
+
 ```{r}
 #For loop uses the list of unique columns and sets up combinations
 #Calls the unique values for conditions and color 
