@@ -1,0 +1,1122 @@
+---
+title: "Quantifying the Visual Mechanisms Underlying the Rod-and-Frame Illusion"
+author: "Ernestine Brannon"
+output:
+  html_document:
+    code_folding: hide
+    fig_width: 6
+    fig_height: 4
+  pdf_document: default
+  word_document: default
+---
+```{r setup, include = FALSE, echo= FALSE}
+
+#rm(list=ls())
+library(here)
+library(knitr)
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+library(psych)
+library(ggstatsplot)
+library(papaja)
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+library(effectsize)
+library(flextable)
+library(broom)
+library(report)
+library(doBy)
+library(RColorBrewer)
+library(ggpubr)
+library(ggsignif)
+library(GGally)
+library(kableExtra)
+#source("C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/Utilities")
+
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+```
+
+## Analysis {.tabset}
+
+
+```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
+
+optimized_df_file<- here("data","optimized_parameters.csv")
+optimized_df<- read.csv(optimized_df_file)
+optimized_df$sid<-gsub("RFT_Sizes_Perception","",optimized_df$sid)
+
+#Load perceptual data
+
+data_dir_p <- here("data","p_results")
+
+sids_p<- list.files(data_dir_p) #subject IDS
+
+p_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_p)) {
+  
+  fname <- list.files(file.path(data_dir_p, sids_p[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  p_tmp_data <- rio::import(paste0(data_dir_p,"/", sids_p[i]), na.strings = c("NULL"))
+  
+  p_tmp_data$sid <- sids_p[i]
+  
+  p_data_raw <- rbind(p_data_raw, p_tmp_data) #has all of data across subjects
+  
+}
+
+
+```
+
+```{r clean perceptual data, include=FALSE, echo=FALSE}
+p_data_clean <- p_data_raw %>%
+  janitor::clean_names() %>%
+  filter(trial_type == "real",
+         !is.na(response),
+         rt <= 4000) %>% 
+  select(sid, everything()) %>% 
+  arrange(sid, trial_number) %>%
+  mutate( # add useful columns
+    # recode frame tilt 
+    frame_orient = ifelse(frame_tilt == "-15", "Left", "Right"),
+    # recode staircase approach
+    stair_approach = ifelse(stringi::stri_sub(trial_variant, -1) == "L", "Left", "Right"))%>%
+  # Parse image name
+  #frame_175_15.png
+    mutate(image_name2 = str_remove(frame_name,"frame"))%>%
+  separate(image_name2, into = c("drop1", "frame_size"), sep = "_|.p") %>% 
+  select(-drop1)
+
+p_sids <- unique(p_data_clean$sid)  # list of participant IDs
+
+```
+
+```{r individual RFI magnitude, include=FALSE,echo=FALSE}
+
+# To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. A positive value indicates that participants PSEs are being biased in the direction of the tilt of the frame. 
+
+
+perception<- optimized_df %>% 
+  group_by(sid,frame_size,frame_orientation) %>% 
+  summarize(m_pse = -mean(pse)) %>% 
+  mutate(frame_orientation=recode(frame_orientation, 'Right'='ccw', 'Left'='cw')) %>% 
+  select(sid, frame_size, frame_orientation, m_pse) %>% 
+  ungroup() %>% 
+  group_by(frame_size, frame_orientation) %>% 
+  pivot_wider(names_from = frame_orientation, values_from = m_pse) %>% 
+  mutate(frame_effect_perception= (cw-ccw)/2)
+
+perception$frame_size<-as.factor(perception$frame_size)
+
+```
+
+```{r load vertical data as v_data, include=FALSE, echo=FALSE}
+#Load vertical data
+data_dir_v <-here("data", "v_results")
+
+
+sids_v<- list.files(data_dir_v) #subject IDS
+
+v_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_v)) {
+  
+  fname <- list.files(file.path(data_dir_v, sids_v[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  v_tmp_data <- rio::import(paste0(data_dir_v,"/", sids_v[i]), na.strings = c("NULL"))
+  
+  v_tmp_data$sid <- sids_v[i]
+  
+  v_data_raw <- rbind(v_data_raw, v_tmp_data) #has all of data across subjects
+  
+}
+
+v_data<-v_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") # only use valid trials
+
+v_data$sid <- substr(v_data$sid, start = 1, stop = 8) #clean subject ids
+#get rid of random extra 
+
+```
+
+```{r calculate v error, echo=FALSE,include=FALSE}
+#Performance on each trial was assessed as the difference between true vertical and the angle of rotation of a vector plotted from the fixation point to the final eye position on the response circle. 
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+
+#Add columns saccade error x and y as sacc_v_error_y and sacc_y_error_x
+v_data_calc<- v_data %>%
+  mutate(
+    sacc_v_error_y = f_y - EYE_Y, #fixationY-saccadeY
+    sacc_v_error_x = EYE_X - f_x, #saccadeX-fix
+    v_error_radians = atan2(sacc_v_error_x,sacc_v_error_y), #returns angle in radians for tangent y/x,
+    v_error = v_error_radians *(180/pi)   #multiply by 180 then divide by pi to get degrees
+    
+  )
+
+# 
+# sanity<- v_data_calc %>% 
+#   select(
+#     v_error,v_error_radians,
+#     EYE_X
+#   ) #check 
+
+```
+
+```{r calculate saccade to vertical errors, include=FALSE, echo=FALSE}
+#Add columns saccade error x and y as sacc_v_error_y and sacc_y_error_x
+v_data_calc<- v_data %>%
+  mutate(
+    sacc_v_error_y = f_y - EYE_Y, #fixationY-saccadeY
+    sacc_v_error_x = EYE_X - f_x, #saccadeX-fix
+    v_error_radians = atan2(sacc_v_error_x,sacc_v_error_y), #returns angle in radians for tangent y/x,
+    v_error = v_error_radians *(180/pi)   #multiply by 180 then divide by pi to get degrees 
+  )
+```
+
+```{r v magnitude for each frame size/tilt ,include=FALSE,echo=FALSE}
+
+#The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+
+saccade_to_vert_magnitude<-v_data_calc %>% 
+  group_by(sid,FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(m_errors = mean(v_error)) %>% #The magnitude of the errors were averaged across trials for each of frame tilt/ size and  averaged across rod tilts 
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw')) %>% 
+  select(sid, FRAME_SIZE_VAL,FRAME_TILT_VAL, m_errors) %>% 
+  ungroup() %>% 
+  group_by(FRAME_SIZE_VAL,FRAME_TILT_VAL) %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = m_errors) %>% 
+  mutate(frame_effect_v= (cw-ccw)/2)
+
+saccade_to_vert_magnitude$FRAME_SIZE_VAL<-as.factor(saccade_to_vert_magnitude$FRAME_SIZE_VAL)
+```
+
+```{r load and clean rod data as r_data, include=FALSE, echo=FALSE}
+#Load rod data
+data_dir_r <- here("data", "r_results")
+
+
+sids_r<- list.files(data_dir_r) #subject IDS
+
+r_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_r)) {
+  
+  fname <- list.files(file.path(data_dir_r, sids_r[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  r_tmp_data <- rio::import(paste0(data_dir_r,"/", sids_r[i]), na.strings = c("NULL"))
+  
+  r_tmp_data$sid <- sids_r[i]
+  
+  r_data_raw <- rbind(r_data_raw, r_tmp_data) #has all of data across subjects
+  
+}
+
+r_data <- r_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") %>% 
+    # Parse image name
+  #z_long_rod_5.jpg
+  mutate(rod_tiltjpg = str_remove(ROD_VAL,"z_long_rod_"))%>%
+  mutate(rod_tilt = str_remove(rod_tiltjpg,".jpg")) %>% 
+  select(-rod_tiltjpg)
+
+r_data$rod_tilt<-as.numeric(r_data$rod_tilt)
+
+
+r_data$sid <- substr(r_data$sid, start = 1, stop = 8)
+```
+
+```{r calculate r errors, include=FALSE, echo=FALSE}
+
+#Difference between the rod’s actual orientation and the rotation of a vector plotted from the fixation point to final eye position on the response circle.
+
+r_data_calc<- r_data %>% 
+  mutate(
+    sacc_r_y = f_y - EYE_Y, 
+    sacc_r_x = EYE_X - f_x,
+    r_saccade = atan2(sacc_r_x,sacc_r_y)*180/pi,
+    r_error = r_saccade - rod_tilt
+    
+  )
+
+```
+
+```{r r magnitude for each frame size/tilt and rod tilt,include=FALSE,echo=FALSE}
+#
+
+saccade_to_rod_magnitude<-r_data_calc %>% 
+  group_by(sid,FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(m_errors = mean(r_error)) %>% #The magnitude of the errors were averaged across trials for each of frame tilt/ size and  averaged across rod tilts 
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw')) %>% 
+  select(sid, FRAME_SIZE_VAL,FRAME_TILT_VAL, m_errors) %>% 
+  ungroup() %>% 
+  group_by(FRAME_SIZE_VAL,FRAME_TILT_VAL) %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = m_errors) %>% 
+  mutate(frame_effect_r= (cw-ccw)/2)
+
+saccade_to_rod_magnitude$FRAME_SIZE_VAL<-as.factor(saccade_to_rod_magnitude$FRAME_SIZE_VAL)
+
+```
+
+```{r create df with all tasks magnitudes, include=FALSE, echo=FALSE}
+
+################get needed Perception columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+perception_abs<- perception %>% 
+  select(sid,frame_size,frame_effect_perception) %>% 
+# make sure column names are correct (sid, frame_size, magnitude)
+   rename(magnitude = frame_effect_perception) %>%
+# # add task column, fill all rows with perception
+     mutate(task = "perception") %>% 
+# #subtract first character from sid
+   mutate(across(c('sid'), substr, 2, nchar(sid))) %>% 
+   mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large'))
+
+# make magnitude is positive 
+#perception_abs$magnitude<- -1*(perception_abs$magnitude)
+
+
+################get needed saccade to vertical columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+s2v_abs<- saccade_to_vert_magnitude %>% 
+  select(sid, FRAME_SIZE_VAL,frame_effect_v) %>% 
+  rename(frame_size = FRAME_SIZE_VAL) %>%
+# add task column, fill all rows with perception
+    mutate(task = "s2v") %>% 
+#subtract first character from sid
+  mutate(across(c('sid'), substr, 2, nchar(sid)))
+
+
+################get needed saccade to rod columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+s2r_abs<- saccade_to_rod_magnitude %>% 
+  select(sid, FRAME_SIZE_VAL,frame_effect_r) %>% 
+  rename(sub_1 = FRAME_SIZE_VAL, sub_2 = sid) %>% 
+  ungroup()
+
+
+#add the magnitude of the saccade tasks together
+saccade_combined<- cbind(s2r_abs,s2v_abs)
+saccade_combined$frame_effect_r<- -1*(saccade_combined$frame_effect_r)
+
+saccade_combined$task<- "combined_saccade"
+
+saccade_combined<- saccade_combined %>% 
+  select(sid, frame_size, frame_effect_r, frame_effect_v, task) %>% 
+  mutate(magnitude = frame_effect_r+frame_effect_v )%>% 
+  select(sid, frame_size, magnitude,task) %>% 
+  mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large'))
+
+
+#join by sid
+perc_x_sacc_df <- rbind(perception_abs,saccade_combined)
+
+#make sure task and frame size are factors
+perc_x_sacc_df$task<- as.factor(perc_x_sacc_df$task)
+perc_x_sacc_df$sid<- as.factor(perc_x_sacc_df$sid)
+perc_x_sacc_df$frame_size<- as.factor(perc_x_sacc_df$frame_size)
+
+```
+
+```{r create df with all tasks}
+all_task<- cbind(s2r_abs,s2v_abs) %>% 
+  select(sid, frame_effect_r, frame_effect_v, frame_size)
+
+
+p_df<- perception_abs %>%
+  ungroup() %>% 
+  select(magnitude, sid) %>% 
+  rename(sub_1 =sid)
+
+all_task<- cbind(all_task,p_df)
+
+all_task<- all_task %>% 
+  select(-sub_1)
+
+all_task<-all_task %>% 
+  rename(vv= frame_effect_v,
+         oc = frame_effect_r,
+         perc = magnitude)
+```
+
+```{r combined sacc by perception cor, echo = FALSE}
+across_frames<- perc_x_sacc_df %>%
+  pivot_wider(names_from = task, values_from = magnitude)
+
+
+#175
+comb_sacc_perc_175<- across_frames %>% 
+  filter(frame_size == "Small")
+
+cor_comb_perc_175<- cor.test(comb_sacc_perc_175$perception,comb_sacc_perc_175$combined_saccade)
+
+#410
+comb_sacc_perc_410<- across_frames %>% 
+  filter(frame_size == "Medium")
+
+cor_comb_perc_410<- cor.test(comb_sacc_perc_410$perception,comb_sacc_perc_410$combined_saccade)
+
+#645
+comb_sacc_perc_645<- across_frames %>% 
+  filter(frame_size == "Large")
+
+cor_comb_perc_645<- cor.test(comb_sacc_perc_645$perception,comb_sacc_perc_645$combined_saccade)
+
+#880
+comb_sacc_perc_880<- across_frames %>% 
+  filter(frame_size == "Extra Large")
+
+cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$combined_saccade)
+
+```
+
+### Perception Task: RFI
+
+To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. 
+
+~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
+
+```{r percept summary stat table, echo=FALSE}
+p_descriptives <- perception %>% group_by(perception[2]) %>%
+#  mutate(frame_effect_perception = -1*frame_effect_perception) %>% ## the RFI is multiplied by -1
+  summarize(
+    Mean = mean(frame_effect_perception)
+    , Median = median(frame_effect_perception)
+    , SD = sd(frame_effect_perception)
+    , Min = min(frame_effect_perception)
+    , Max = max(frame_effect_perception)
+  ) %>% 
+  mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+p_descriptives <- p_descriptives %>% 
+  rename("Frame Size"= frame_size)
+  
+#p_descriptives[, -1] <- printnum(p_descriptives[, -1])
+
+desc_perc<-apa_table(
+  p_descriptives
+  , caption = "Perception Task"
+  , escape = TRUE,
+  added_stub_head = "Frame Size"
+)
+#names(desc_perc)[1]<- "Frame Size"
+
+desc_perc
+```
+
+```{r mean and sd perc effect, echo=FALSE, include=FALSE}
+#t.test.results<- nice_t_test(data= perception_summary_by_frame,  "m_pse")
+
+individual_perc_df <-optimized_df %>%
+  select(sid, frame_size, frame_orientation, pse) %>% 
+  pivot_wider(names_from = c(frame_orientation,frame_size), values_from = pse) %>% 
+  mutate(
+    rfi_175 = Right_175 - Left_175,
+    rfi_410 = Right_410 - Left_410,
+    rfi_645 = Right_645 - Left_645,
+    rfi_880 = Right_880 - Left_880) 
+  
+rfi_summary<- individual_perc_df %>%  
+  select(sid,rfi_175,rfi_410,rfi_645,rfi_880) %>% 
+  summarize( mean_175 = mean(rfi_175),
+  sd_175 = sd(rfi_175),
+  mean_410 = mean(rfi_410),
+  sd_410 = sd(rfi_410),
+  mean_645 = mean (rfi_645),
+  mean_880 = mean(rfi_880),
+  sd_880 = sd(rfi_880)
+  )
+
+#Create table to display means and standard deviations for illusion magnitude (effect of frame size on PSE)
+
+rfi_summary_table<-nice_table(rfi_summary)
+rfi_summary_table
+rfi_175_ttest<-t.test(individual_perc_df$rfi_175)
+report::report(rfi_175_ttest)
+rfi_410_ttest<-t.test(individual_perc_df$rfi_410)
+report::report(rfi_410_ttest)
+rfi_645_ttest<-t.test(individual_perc_df$rfi_645)
+report::report(rfi_645_ttest)
+rfi_880_ttest<-t.test(individual_perc_df$rfi_880)
+report::report(rfi_880_ttest)
+
+```
+
+```{r perc ttest against zero, echo=FALSE}
+p_df<-perception%>% group_by(frame_size) %>% do(tidy(t.test(.$frame_effect_perception)))
+perc_ttest_table<-nice_table(p_df,
+                            title= "Perception Task: RFI")
+perc_ttest_table
+```
+
+
+```{r perc aov frame size effect}
+p_mag_anova<- aov(frame_effect_perception ~frame_size, data =perception)
+summary(p_mag_anova)
+tukey_p<-tukey_hsd(p_mag_anova)
+apa_table(tukey_p)
+```
+
+***The results between the table and graph are inconsistent due to different tests being used. I am unsure whether I need to use the Tukey HSD test ( shown in the table above) or if a Bonferroni correction is more appropriate (used in the violin graph below).***
+
+```{r percept repeated measures graph, echo=FALSE}
+set.seed(1)
+perception<- perception %>% 
+  ungroup() %>% 
+  mutate(magnitude = frame_effect_perception)%>% 
+  mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+p_mag<-ggwithinstats(
+  data = perception,
+  x = frame_size,
+  y = magnitude,
+  type = "parametric",
+  xlab = "Frame Size",
+  ylab = "Perceptual Effect",
+  bf.message = FALSE,
+  results.subtitle = FALSE,
+  centrality.path = TRUE,
+  centrality.label.args = list(size = 0,
+  segment.linetype = 0, alpha = 0),
+  ggsignif.args = list(textsize = 0))
+
+gginnards::delete_layers(p_mag, "GeomText")
+
+#gginnards::delete_layers(p_mag, "StatSummary")
+
+
+```
+
+### Saccade-to-Vertical Task: Visuovestibular Effect
+
+
+The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+
+
+```{r s2v summary stat table, echo=FALSE}
+s2v_descriptives <- saccade_to_vert_magnitude %>% group_by(saccade_to_vert_magnitude[2]) %>%
+  summarize(
+    Mean = mean(frame_effect_v)
+    , Median = median(frame_effect_v)
+    , SD = sd(frame_effect_v)
+    , Min = min(frame_effect_v)
+    , Max = max(frame_effect_v)
+  ) %>% 
+  mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+s2v_descriptives <- s2v_descriptives %>% 
+  rename("Frame Size"= FRAME_SIZE_VAL)
+  
+#p_descriptives[, -1] <- printnum(p_descriptives[, -1])
+
+desc_v<-apa_table(
+  s2v_descriptives
+  , caption = "Saccade-to-Vertical Task"
+  , escape = TRUE,
+  added_stub_head = "Frame Size"
+)
+#names(desc_perc)[1]<- "Frame Size"
+
+desc_v
+```
+
+```{r s2v ttest against zero, echo=FALSE}
+s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_v)))
+s2v_ttest_table<-nice_table(s2v_ttest_df,
+                            title= "Saccade-to-Vertical: Visuovestibular Effect")
+```
+
+```{r s2v ttest table}
+s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_v)))
+nice_table(s2v_ttest_df)
+```
+
+```{r s2v aov frame size effect}
+vv_mag_anova<- aov(frame_effect_v~FRAME_SIZE_VAL, data =saccade_to_vert_magnitude)
+#summary(vv_mag_anova)
+tukey_vv<-tukey_hsd(vv_mag_anova)
+apa_table(tukey_vv)
+```
+
+```{r s2v graph, echo=FALSE}
+set.seed(1)
+saccade_to_vert_magnitude<- saccade_to_vert_magnitude %>% 
+  ungroup()%>% 
+  mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+vv_mag<- ggwithinstats(
+  data = saccade_to_vert_magnitude,
+  x = FRAME_SIZE_VAL,
+  y = frame_effect_v,
+  type = "parametric",
+  xlab = "Frame Size",
+  ylab = "Visuo-vestibular Effect",
+  bf.message = FALSE,
+  results.subtitle = FALSE,
+  centrality.path = TRUE,
+  centrality.label.args = list(size = 0,
+  segment.linetype = 0, alpha = 0),
+  ggsignif.args = list(textsize = 0))
+
+#gginnards::delete_layers(vv_mag, "GeomText")
+
+gginnards::delete_layers(vv_mag, "StatSummary")
+
+#vv_mag
+
+
+
+# s2v_bxplt<- ggboxplot(saccade_to_vert_magnitude, x = "FRAME_SIZE_VAL", y = "frame_effect_v")+
+#   labs(x = "Frame Size", y = "Visuo-vestibular Effect")
+# s2v_bxplt
+```
+
+```{r s2v perception correlation by frame graph 1, echo=FALSE}
+
+s2v_2<- s2v_abs %>%
+  ungroup() %>% 
+  mutate(task = "s2v") %>% 
+  rename(magnitude = frame_effect_v) %>%
+  mutate((frame_size=recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large')))
+  
+s2v_2$frame_size <- s2v_2$`(...)`
+
+colnames(s2v_2)<- c("sid", "frame_size", "magnitude", "task", "sub_1")
+
+s2v_2<-s2v_2 %>%
+  select(-sub_1)
+
+perc_x_s2v_df<- rbind(s2v_2,perception_abs)
+
+perc_x_s2v_df<- perc_x_s2v_df %>%
+  pivot_wider(names_from = task, values_from = magnitude)
+
+corr_perc_s2v<-cor.test(perc_x_s2v_df$perception,perc_x_s2v_df$s2v)  
+
+ggplot(perc_x_s2v_df)+
+  aes(perception, s2v, color = frame_size)+
+  geom_point()+
+  stat_smooth(method =lm, show.legend = FALSE)+
+  facet_wrap(~frame_size, nrow =1)+
+  theme(aspect.ratio = 1)+
+#  ggtitle("Perception and Saccade to Vertical")+
+  labs( x = "Perception", y = " Saccade to Vertical")
+
+```
+
+
+### Saccade to Rod : Orientation Contrast Effect
+
+The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+
+```{r s2r summary stat table, echo=FALSE}
+s2r_descriptives <- saccade_to_rod_magnitude %>% group_by(saccade_to_rod_magnitude[2]) %>%
+  summarize(
+    Mean = mean(frame_effect_r)
+    , Median = median(frame_effect_r)
+    , SD = sd(frame_effect_r)
+    , Min = min(frame_effect_r)
+    , Max = max(frame_effect_r)
+  ) %>% 
+  mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+s2r_descriptives <- s2r_descriptives %>% 
+  rename("Frame Size"= FRAME_SIZE_VAL)
+  
+#p_descriptives[, -1] <- printnum(p_descriptives[, -1])
+
+desc_r<-apa_table(
+  s2r_descriptives
+  , caption = "Saccade-to-Rod Task: Orientation Contrast Effect"
+  , escape = TRUE,
+  added_stub_head = "Frame Size"
+)
+#names(desc_perc)[1]<- "Frame Size"
+
+desc_r
+```
+
+```{r s2r ttest table, echo = FALSE}
+s2r_ttest_df<-saccade_to_rod_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_r)))
+nice_table(s2r_ttest_df)
+```
+
+```{r s2r ttest, include = FALSE, echo = FALSE}
+
+s2r_mag_175 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "175")
+s2r_175_ttest <- t.test(s2r_mag_175$frame_effect_r)
+
+
+s2r_mag_410 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "410")
+s2r_410_ttest <- t.test(s2r_mag_410$frame_effect_r)
+
+s2r_mag_645 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "645")
+s2r_645_ttest <- t.test(s2r_mag_645$frame_effect_r)
+
+s2r_mag_880 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "880")
+s2r_880_ttest <- t.test(s2r_mag_880$frame_effect_r)
+
+#Report Stats for each 
+
+s2r_175<- report(s2r_175_ttest)
+s2r_175
+
+s2r_410<- report(s2r_410_ttest)
+s2r_410
+
+s2r_645 <- report(s2r_645_ttest)
+s2r_645
+
+s2r_880<- report(s2r_880_ttest)
+s2r_880
+
+```
+
+```{r s2r aov frame size effect}
+oc_mag_anova<- aov(frame_effect_r~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
+summary(oc_mag_anova)
+tukey_oc<-tukey_hsd(oc_mag_anova)
+apa_table(tukey_oc)
+```
+
+```{r s2r within graph, echo=FALSE}
+
+set.seed(1)
+saccade_to_rod_magnitude<- saccade_to_rod_magnitude %>%
+# mutate(frame_effect_r = -1*frame_effect_r) %>% 
+  ungroup() %>% 
+  mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+## 
+oc_mag_anova<- aov(frame_effect_r~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
+summary(oc_mag_anova)
+tukey_oc<-tukey_hsd(oc_mag_anova)
+#summary(tukey_oc)
+apa_table(tukey_oc)
+
+oc_mag<-ggwithinstats(
+  data = saccade_to_rod_magnitude,
+  x = FRAME_SIZE_VAL,
+  y = frame_effect_r,
+  type = "parametric",
+  xlab = "Frame Size",
+  ylab = "Orientation Contrast Effect",
+#  title = "Illusion Magnitude for Saccade-to-Rod Task",
+  bf.message = FALSE,
+  results.subtitle = FALSE,
+  centrality.path = TRUE,
+  centrality.label.args = list(size = 0, segment.linetype = 0, alpha = 0),
+  ggsignif.args = list(textsize = 0))
+
+
+#gginnards::delete_layers(oc_mag, "GeomText")
+
+gginnards::delete_layers(oc_mag, "StatSummary")
+
+#oc_mag
+#extract_stats(oc_mag)
+
+
+```
+
+```{r perception s2r correlation by frame 1, echo=FALSE, fig.dim=c(1,4)}
+
+s2r_2<- s2r_abs %>%
+  mutate(frame_size = recode(sub_1, "175" = 'Small', "410"= 'Medium', "645"= 'Large', "880"= 'Extra Large')) %>% 
+  mutate( task = "s2r") %>% 
+  mutate("magnitude"= frame_effect_r) %>% 
+  mutate("sid"= sub_2) %>% 
+  select(sid,frame_size,magnitude,task)
+
+s2r_2$sid <- substr(s2r_2$sid, start = 2, stop = 8) #clean subject ids
+
+
+s2r_2$sid<-as_factor(s2r_2$sid)
+
+perception_abs_2<-perception_abs %>% 
+  mutate(frame_size = recode(frame_size , "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+perception_abs_2$sid<-as_factor(perception_abs_2$sid)
+perception_abs_2$task<- as_factor(perception_abs_2$task)
+perc_x_s2r_df<- rbind(s2r_2,perception_abs_2)
+
+perc_x_s2r_df<- perc_x_s2r_df %>%
+   pivot_wider(names_from = task, values_from = magnitude)
+
+```
+
+```{r perc by rod 1, echo=FALSE}
+ggplot(perc_x_s2r_df)+
+  aes(perception, s2r, color = frame_size)+
+  geom_point(show.legend = FALSE)+
+  stat_smooth(method = lm, show.legend = FALSE)+
+  facet_grid(. ~ frame_size)+ 
+  theme(aspect.ratio = 1)+
+  labs(x= "Perception Task", y = "Saccade to Rod")
+
+#  facet_wrap(~frame_size, nrow = 1)+
+#  ggtitle("Perception and Saccade to Rod")+
+
+
+```
+
+
+### Combined Saccades and Perception Task Comparison
+
+So far the perceptual and orientation contrast effect were reported as negative numbers, indicating that the perceptual response or saccade erred in the opposite direction of the tilt of the frame. However, it should be noted that for the purpose of making an additive comparison between summed saccade tasks and the perceptual response, we used the inverse value of the OC effect.
+
+```{r summary stats combined, include=FALSE, echo=FALSE}
+perc_x_sacc_df %>%
+ group_by(frame_size,task) %>%
+ get_summary_stats(magnitude, type = "mean_sd")
+
+perc_x_sacc_desc<- nice_table(perc_x_sacc_df)
+
+# perc_x_sacc_descriptives <- perc_x_sacc_df %>% group_by(frame_size,task) %>%
+#   summarize(
+#     Mean = mean(magnitude)
+#     , Median = median(magnitude)
+#     , SD = sd(magnitude)
+#     , Min = min(magnitude)
+#     , Max = max(magnitude)
+#   ) %>% 
+#   mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+# 
+# perc_x_sacc_descriptives <- perc_x_sacc_descriptives %>% 
+#   rename("Frame Size"= frame_size)
+#   
+# #p_descriptives[, -1] <- printnum(p_descriptives[, -1])
+# 
+# desc_p_x_sacc<-apa_table(
+#   perc_x_sacc_descriptives
+#   , caption = "Combined Saccade Tasks and Perception Tasks"
+#   , escape = TRUE,
+#   added_stub_head = "Frame Size"
+# )
+# #names(desc_perc)[1]<- "Frame Size"
+# 
+# desc_p_x_sacc
+# ```
+```  
+
+```{r boxplot perception_x_saccade, echo=FALSE}
+psd<- perc_x_sacc_df %>% 
+  mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+bxp<- ggpubr::ggboxplot(psd,x = "frame_size", y = "magnitude", color = "task")+
+  ggtitle("Illusion Magnitude for Perception and Combined Saccade Tasks")+
+  labs( x = "Frame Size", y = "Illusion Magnitude", color = "Task")+
+  scale_color_discrete(name = "Task", labels = c("Combined Saccade Tasks", "Perception Task"))
+bxp
+```
+
+```{r perception and combined saccade anova, echo = FALSE, include = FALSE}
+
+perc_sacc_aov<- perc_x_sacc_df %>% 
+  ungroup() %>%
+  anova_test(dv= magnitude, wid= sid, within = c(frame_size,task))
+
+get_anova_table(perc_sacc_aov)
+
+```
+
+```{r perception and saccade correlation graph, echo=FALSE}
+
+corr_perc_sacc<-cor.test(across_frames$perception, across_frames$combined_saccade)  
+report(corr_perc_sacc)  
+
+ggplot(across_frames)+
+  aes(perception, combined_saccade)+
+  geom_point(aes(color=frame_size))+
+  stat_smooth(method = lm)+
+  labs(x = "Perceptual Effect", y ="Combined Visuovestibular and Orientation Contrast Effects" )
+```
+
+```{r perception and saccade correlation by frame size, echo=FALSE}
+
+corr_perc_sacc<-cor.test(across_frames$perception,across_frames$combined_saccade)  
+report(corr_perc_sacc)  
+
+ggplot(across_frames)+
+  aes(perception, combined_saccade, color = frame_size)+
+  geom_point(show.legend = FALSE)+
+  stat_smooth(method=lm, show.legend =FALSE)+
+  facet_wrap(~frame_size, nrow=1)+
+#  ggtitle("Perception and Combined Saccade Tasks")+
+  theme(aspect.ratio = 1)+
+  labs(x = "Perception", y = "Combined Saccade Tasks")
+
+
+
+```
+
+**Perception and Saccade-to-Vertical**
+
+```{r s2v perception correlation by frame graph, echo=FALSE}
+
+s2v_2<- s2v_abs %>%
+  ungroup() %>% 
+  mutate(task = "s2v") %>% 
+  rename(magnitude = frame_effect_v) %>%
+  mutate((frame_size=recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large')))
+  
+s2v_2$frame_size <- s2v_2$`(...)`
+
+colnames(s2v_2)<- c("sid", "frame_size", "magnitude", "task", "sub_1")
+
+s2v_2<-s2v_2 %>%
+  select(-sub_1)
+
+perc_x_s2v_df<- rbind(s2v_2,perception_abs)
+
+perc_x_s2v_df<- perc_x_s2v_df %>%
+  pivot_wider(names_from = task, values_from = magnitude)
+
+corr_perc_s2v<-cor.test(perc_x_s2v_df$perception,perc_x_s2v_df$s2v)  
+
+ggplot(perc_x_s2v_df)+
+  aes(perception, s2v, color = frame_size)+
+  geom_point()+
+  stat_smooth(method =lm, show.legend = FALSE)+
+  facet_wrap(~frame_size, nrow =1)+
+  theme(aspect.ratio = 1)+
+#  ggtitle("Perception and Saccade to Vertical")+
+  labs( x = "Perception", y = " Saccade to Vertical")
+
+```
+
+```{r, s2v perc corr tests, include= FALSE}
+#175
+s2v_perc_175<- perc_x_s2v_df %>% 
+  filter(frame_size =="Small")
+
+cor_s2v_perc_175<- cor.test(s2v_perc_175$perception,s2v_perc_175$s2v)
+
+
+#410
+s2v_perc_410<- perc_x_s2v_df %>% 
+  filter(frame_size =="Medium")
+
+cor_s2v_perc_410<- cor.test(s2v_perc_410$perception,s2v_perc_410$s2v)
+
+
+#645
+s2v_perc_645<- perc_x_s2v_df %>% 
+  filter(frame_size == "Large")
+
+cor_s2v_perc_645<- cor.test(s2v_perc_645$perception,s2v_perc_645$s2v)
+
+#880
+s2v_perc_880<- perc_x_s2v_df %>% 
+  filter(frame_size == "Extra Large")
+
+cor_s2v_perc_880<- cor.test(s2v_perc_880$perception,s2v_perc_880$s2v)
+
+```
+
+**Perception and Saccade-to-Rod**
+
+```{r perception s2r correlation by frame, echo=FALSE, fig.dim=c(1,4)}
+s2r_2<- s2r_abs %>%
+  mutate(frame_size = recode(sub_1, "175" = 'Small', "410"= 'Medium', "645"= 'Large', "880"= 'Extra Large')) %>% 
+  mutate( task = "s2r") %>% 
+  mutate("magnitude"= frame_effect_r) %>% 
+  mutate("sid"= sub_2) %>% 
+  select(sid,frame_size,magnitude,task)
+
+s2r_2$sid <- substr(s2r_2$sid, start = 2, stop = 8) #clean subject ids
+
+
+s2r_2$sid<-as_factor(s2r_2$sid)
+
+perception_abs_2<-perception_abs %>% 
+  mutate(frame_size = recode(frame_size , "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
+
+perception_abs_2$sid<-as_factor(perception_abs_2$sid)
+perception_abs_2$task<- as_factor(perception_abs_2$task)
+perc_x_s2r_df<- rbind(s2r_2,perception_abs_2)
+
+perc_x_s2r_df<- perc_x_s2r_df %>%
+   pivot_wider(names_from = task, values_from = magnitude)
+
+```
+
+```{r perc by rod, echo=FALSE}
+ggplot(perc_x_s2r_df)+
+  aes(perception, s2r, color = frame_size)+
+  geom_point(show.legend = FALSE)+
+  stat_smooth(method = lm, show.legend = FALSE)+
+  facet_grid(. ~ frame_size)+ 
+  theme(aspect.ratio = 1)+
+  labs(x= "Perception Task", y = "Saccade to Rod")
+
+#  facet_wrap(~frame_size, nrow = 1)+
+#  ggtitle("Perception and Saccade to Rod")+
+
+
+```
+
+```{r perception and s2r corr for ind frame sizes, echo=FALSE, inlcude = FALSE}
+#175
+s2r_perc_175<- perc_x_s2r_df %>%
+  filter(frame_size == "Small")
+
+cor_s2r_perc_175<- cor.test(s2r_perc_175$perception,s2r_perc_175$s2r)
+#report(cor_s2r_perc_175)
+
+
+#410
+s2r_perc_410<- perc_x_s2r_df %>%
+  filter(frame_size == "Medium")
+
+cor_s2r_perc_410<- cor.test(s2r_perc_410$perception,s2r_perc_410$s2r)
+#report(cor_s2r_perc_410)
+
+#645
+s2r_perc_645<- perc_x_s2r_df %>%
+  filter(frame_size =="Large")
+
+cor_s2r_perc_645<- cor.test(s2r_perc_645$perception,s2r_perc_645$s2r)
+#report(cor_s2r_perc_645)
+
+#880
+s2r_perc_880<- perc_x_s2r_df %>%
+  filter(frame_size == "Extra Large")
+
+cor_s2r_perc_880<- cor.test(s2r_perc_880$perception,s2r_perc_880$s2r)
+#report(cor_s2r_perc_880)
+
+
+```
+
+
+
+### Model Comparison
+
+For each frame size a hierarchical design was employed using two models: 1) model 1 predicted the overall RFI magnitude  (measured by the perception task) from the visuovestibular effect (measured by the saccade-to-vertical task) and  2) model 2 predicted the overall RFI magnitude from visuovestibular effect and the orientation contrast effect (measured by the saccade-to-rod task). 
+
+- **Small Frame**
+
+```{r model comparison small frame, echo = FALSE}
+
+
+df_small<- all_task %>% 
+  filter(frame_size == "175")
+
+df_175_across<- df_small %>% 
+  select(-sid, -frame_size)
+
+#ggpairs(df_175_across)
+model_1_small<- lm(perc~vv, df_small)
+summary(model_1_small)
+model_2_small<- lm(perc~ vv +oc, df_small)
+summary(model_2_small)
+
+#change in r squared
+small_rsq_change<- summary(model_2_small)$r.squared - summary(model_1_small)$r.squared
+small_rsq_change
+
+aov_small<- anova(model_1_small,model_2_small, test = "F")
+aov_small
+```
+
+- **Medium Frame**
+
+```{r model comparison frame 410, echo = FALSE}
+
+df_medium<- all_task %>% 
+  filter(frame_size == "410")
+
+df_410_across<- df_medium %>% 
+  select(-sid, -frame_size)
+
+#ggpairs(df_410_across)
+
+
+model_1_medium<- lm(perc~vv, df_medium)
+#summary(model_1_medium)
+
+model_2_medium<- lm(perc~ vv +oc, df_medium)
+#summary(model_2_medium)
+
+#change in r squared
+medium_rsq_change<- summary(model_2_medium)$r.squared - summary(model_1_medium)$r.squared
+medium_rsq_change
+
+aov_medium<- anova(model_1_medium,model_2_medium, test = "F")
+aov_medium
+```
+
+- **Large Frame**
+
+```{r model comparison frame large, echo= FALSE}
+
+df_large<- all_task %>% 
+  filter(frame_size == "645")
+
+df_large_across<- df_large %>% 
+  select(-sid, -frame_size)
+
+#ggpairs(df_410_across)
+
+
+model_1_large<- lm(perc~vv, df_large)
+
+model_2_large<- lm(perc~ vv +oc, df_large)
+
+#change in r squared
+large_rsq_change<- summary(model_2_large)$r.squared - summary(model_1_large)$r.squared
+large_rsq_change
+
+
+aov_large<- anova(model_1_large,model_2_large, test = "F")
+aov_large
+```
+
+- **Extra Large Frame**
+
+```{r model comparison frame 880, echo = FALSE}
+
+df_xl<- all_task %>% 
+  filter(frame_size == "880")
+
+df_xl_across<- df_xl %>% 
+  select(-sid, -frame_size)
+
+#ggpairs(df_880_across)
+
+model_1_xl<- lm(perc~vv, df_xl)
+
+model_2_xl<- lm(perc~ vv +oc, df_xl)
+
+#change in r squared
+xl_rsq_change<- summary(model_2_xl)$r.squared - summary(model_1_xl)$r.squared
+xl_rsq_change
+
+aov_xl<- anova(model_1_xl,model_2_xl, test = "F")
+aov_xl
+
+```
+
+
+### {-}

@@ -1,0 +1,157 @@
+---
+title: "Saccade-to-Rod Data Processing"
+author: "Ernestine Brannon"
+output: html_document 
+---
+
+```{r setup, include = FALSE, echo= FALSE}
+
+#rm(list=ls())
+
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+library(psych)
+
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+library(effectsize)
+library(flextable)
+library(broom)
+library(report)
+library(doBy)
+
+source("./Utilities/PsyFUN_source.R")
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+```
+
+### Saccade to Rod
+
+```{r load and clean rod data as r_data, include=FALSE, echo=FALSE}
+#Load rod data
+data_dir_r <-"./data/r_results"
+
+
+sids_r<- list.files(data_dir_r) #subject IDS
+
+r_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_r)) {
+  
+  fname <- list.files(file.path(data_dir_r, sids_r[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  r_tmp_data <- rio::import(paste0(data_dir_r,"/", sids_r[i]), na.strings = c("NULL"))
+  
+  r_tmp_data$sid <- sids_r[i]
+  
+  r_data_raw <- rbind(r_data_raw, r_tmp_data) #has all of data across subjects
+  
+}
+
+r_data <- r_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") %>% 
+    # Parse image name
+  #z_long_rod_5.jpg
+  mutate(rod_tiltjpg = str_remove(ROD_VAL,"z_long_rod_"))%>%
+  mutate(rod_tilt = str_remove(rod_tiltjpg,".jpg")) %>% 
+  select(-rod_tiltjpg)
+
+r_data$rod_tilt<-as.numeric(r_data$rod_tilt)
+```
+
+
+```{r calculate r errors, include=FALSE, echo=FALSE}
+
+#Difference between the rod’s actual orientation and the rotation of a vector plotted from the fixation point to final eye position on the response circle.
+
+r_data_calc<- r_data %>% 
+  mutate(
+    sacc_r_y = f_y - EYE_Y, 
+    sacc_r_x = EYE_X - f_x,
+    r_saccade = atan2(sacc_r_x,sacc_r_y)*180/pi,
+    r_error = r_saccade - rod_tilt
+    
+  )
+
+```
+
+
+
+```{r r magnitude for each frame size/tilt and rod tilt,include=FALSE,echo=FALSE}
+#The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+
+saccade_to_rod_magnitude<-r_data_calc %>% 
+  group_by(sid,FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(m_errors = mean(r_error)) %>% #The magnitude of the errors were averaged across trials for each of frame tilt/ size and  averaged across rod tilts 
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw')) %>% 
+  select(sid, FRAME_SIZE_VAL,FRAME_TILT_VAL, m_errors) %>% 
+  ungroup() %>% 
+  group_by(FRAME_SIZE_VAL,FRAME_TILT_VAL) %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = m_errors) %>% 
+  mutate(frame_effect_r= (cw-ccw)/2)
+
+saccade_to_rod_magnitude$FRAME_SIZE_VAL<-as.factor(saccade_to_rod_magnitude$FRAME_SIZE_VAL)
+
+```
+
+```{r s2r ttest table echo = FALSE}
+s2r_ttest_df<-saccade_to_rod_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_r)))
+nice_table(s2r_ttest_df)
+```
+
+```{r s2r ttest, include = FALSE, echo = FALSE}
+
+s2r_mag_175 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "175")
+s2r_175_ttest <- t.test(s2r_mag_175$frame_effect_r)
+
+
+s2r_mag_410 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "410")
+s2r_410_ttest <- t.test(s2r_mag_410$frame_effect_r)
+
+s2r_mag_645 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "645")
+s2r_645_ttest <- t.test(s2r_mag_645$frame_effect_r)
+
+s2r_mag_880 <- saccade_to_rod_magnitude %>%
+  filter(FRAME_SIZE_VAL== "880")
+s2r_880_ttest <- t.test(s2r_mag_880$frame_effect_r)
+
+#Report Stats for each 
+
+s2r_175<- report(s2r_175_ttest)
+s2r_175
+
+s2r_410<- report(s2r_410_ttest)
+s2r_410
+
+s2r_645 <- report(s2r_645_ttest)
+s2r_645
+
+s2r_880<- report(s2r_880_ttest)
+s2r_880
+
+```
+
+
+```{r s2r within graph, echo=FALSE}
+set.seed(1)
+saccade_to_rod_magnitude<- saccade_to_rod_magnitude %>% 
+  ungroup()
+ggwithinstats(
+  data = saccade_to_rod_magnitude,
+  x = FRAME_SIZE_VAL,
+  y = frame_effect_r,
+  type = "parametric"
+)
+```
+
+
+

@@ -1,0 +1,151 @@
+---
+title: "PsyFun -- Documentation"
+author: "Jeff Peterson"
+date: "11/5/2020"
+output: html_document
+---
+
+# Documentation: PsyFun suite of functions
+
+```{r setup, include=FALSE, echo=FALSE}
+library(tidyverse)
+
+load("demo_data")
+source("PsyFun_source.R")
+```
+
+The PsyFun_source.R script contains three types of functions:
+
+1) Logistic functions to be fit to raw data
+2) Helper functions for plotting curve fits
+3) Function to find where curve crosses a user-defined threshold
+
+
+# 'psy_fun()'
+
+Data to be fit should be in the following format:
+One row per observation, with different columns representing subject (sid), conditions (frame orient, rod_lum, probe_del_ms), stimulus level (rod tilt), and response.
+
+```{r}
+knitr::kable(demo_data[1:8,])
+```
+
+Data could also have average response within each condition, rather than binary responses:
+
+```{r}
+compress_data <- demo_data %>% 
+  group_by(sid, frame_orient, rod_lum, probe_del_ms, rod_tilt) %>% 
+  summarize(m_rsp = mean(response))
+
+knitr::kable(compress_data[1:8,])
+```
+
+
+The result of 'psy_fun()' is the sum of squared errors -- the difference between the predicted and actual data -- if the function were fit with the initial parameters.
+
+```{r}
+
+# Selected data for one condition
+tmp_data <- compress_data %>% 
+  filter(sid == "181102sl", 
+         frame_orient == "Left", 
+         rod_lum == "Bright", 
+         probe_del_ms == -200)
+
+# Plot raw data
+plot(tmp_data$rod_tilt, tmp_data$m_rsp)
+
+# Fit initial model with pse = 1 and slope = 1
+model.0 <- psy_fun(x_val = tmp_data$rod_tilt, rsp = tmp_data$m_rsp,
+                   par = c(1, 1))
+
+plot(tmp_data$rod_tilt, tmp_data$m_rsp)
+
+
+print(paste0("Initial Error: ", round(model.0, 3)))
+
+# A better fit
+model.1 <- psy_fun(x_val = tmp_data$rod_tilt, rsp = tmp_data$m_rsp,
+                   par = c(-2.1, 0.6))
+
+
+print(paste0("Adjusted Model Error: ", round(model.1, 3)))
+
+{
+  plot(tmp_data$rod_tilt, tmp_data$m_rsp, 
+       xlab = "Rod Tilt",
+       ylab = "% Rsp Rightward")
+  lines(psy_plot(x_val = -20:20, par = c(-2.1, 0.6)), col = "green")
+  lines(psy_plot(x_val = -20:20, par = c(1, 1)), col = "red")
+}
+
+
+```
+
+In principle, you could adjust the parameters manually to find the best fit. The 'opim()' function adjusts initial, user supplied, parameters to minimize the result of the function. In this context, we can pipe the 'psy_fun()' through optim() to find the parameters that reduce the error between the observed and predicted data.
+
+```{r}
+
+# Supply range to plot curve - same units as x_val supplied below
+x_plotlims2 <- -30:30 
+
+pse_fits <- demo_data %>% 
+  group_by(sid, frame_orient, probe_del_ms, rod_lum) %>%
+  nest() %>% 
+  
+  mutate(psy_fit = map(data, ~optim(par   = c(1, 1),       # initial parameters 
+                                    fn    = psy_fun,       # function to optimize
+                                    x_val = .$rod_tilt,    # stimulus levels
+                                    rsp   = .$response)),  # response
+         
+         # Step is optional
+         # Pulls out fitted parameters for easy access
+         pse      = map_dbl(psy_fit, ~.$par[1]),
+         slope    = map_dbl(psy_fit, ~.$par[2]),
+         residual = map_dbl(psy_fit, "value"),
+         converge = map_dbl(psy_fit, ~.$convergence),
+         
+         curve_fit = map(psy_fit, ~psy_plot(x_val = x_plotlims2, 
+                                            par   = c(.$par[1], .$par[2]))),
+         
+         indv_pts  = map(data, ~get_indv_pts(x = .$rod_tilt, y = .$response))
+  ) %>% 
+  
+  arrange(sid, probe_del_ms, frame_orient, rod_lum)
+
+```
+
+
+Specifically for fitting logistic function to observed data. 
+The function fits 2 parameters: midpoint of sigmoid - where it crosses 50% threshold
+space constant - i.e., gain of curve
+Can optionally fit third parameter: height at which function converges OR the lapse rate
+
+Sets up function to minimize.
+
+
+
+psy_funX and psy_plotX were specifically designed for the RFI time course Dim Rod experiment
+The general utility of these functions is likely limited.
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

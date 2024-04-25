@@ -1,0 +1,6 @@
+---
+title: "Polynomial Contrasts"
+output:
+  html_notebook:
+    toc: yes
+---

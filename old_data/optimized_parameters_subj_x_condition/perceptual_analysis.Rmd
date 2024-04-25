@@ -1,0 +1,158 @@
+---
+title: "Perceptual Data Processing"
+author: "Ernestine Brannon"
+output: html_document 
+---
+
+```{r setup, include = FALSE, echo= FALSE}
+
+#rm(list=ls())
+
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+library(psych)
+library(ggstatsplot)
+
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+library(effectsize)
+library(flextable)
+library(broom)
+library(report)
+library(doBy)
+
+source("./Utilities/PsyFUN_source.R")
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+```
+
+```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
+
+#Load perceptual data
+data_dir_p <-"./data/p_results"
+
+sids_p<- list.files(data_dir_p) #subject IDS
+
+p_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_p)) {
+  
+  fname <- list.files(file.path(data_dir_p, sids_p[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  p_tmp_data <- rio::import(paste0(data_dir_p,"/", sids_p[i]), na.strings = c("NULL"))
+  
+  p_tmp_data$sid <- sids_p[i]
+  
+  p_data_raw <- rbind(p_data_raw, p_tmp_data) #has all of data across subjects
+  
+}
+optimized_df<-read.csv("optimized_parameters")
+
+```
+
+```{r clean perceptual data, include=FALSE, echo=FALSE}
+
+
+p_data_clean <- p_data_raw %>%
+  janitor::clean_names() %>%
+  filter(trial_type == "real",
+         !is.na(response),
+         rt <= 4000) %>% 
+  select(sid, everything()) %>% 
+  arrange(sid, trial_number) %>%
+  mutate( # add useful columns
+    # recode frame tilt 
+    frame_orient = ifelse(frame_tilt == "-15", "Left", "Right"),
+    # recode staircase approach
+    stair_approach = ifelse(stringi::stri_sub(trial_variant, -1) == "L", "Left", "Right"))%>%
+  # Parse image name
+  #frame_175_15.png
+    mutate(image_name2 = str_remove(frame_name,"frame"))%>%
+  separate(image_name2, into = c("drop1", "frame_size"), sep = "_|.p") %>% 
+  select(-drop1)
+
+p_sids <- unique(p_data_clean$sid)  # list of participant IDs
+
+```
+
+```{r individual RFI magnitude, include=FALSE,echo=FALSE}
+
+# To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials. A positive value indicates that participants PSEs are being biased in the direction of the tilt of the frame. 
+
+
+perception<- optimized_df %>% 
+  group_by(sid,frame_size,frame_orientation) %>% 
+  summarize(m_pse = mean(pse)) %>% 
+  mutate(frame_orientation=recode(frame_orientation, 'Right'='ccw', 'Left'='cw')) %>% 
+  select(sid, frame_size, frame_orientation, m_pse) %>% 
+  ungroup() %>% 
+  group_by(frame_size, frame_orientation) %>% 
+  pivot_wider(names_from = frame_orientation, values_from = m_pse) %>% 
+  mutate(frame_effect_perception= (cw-ccw)/2)
+
+perception$frame_size<-as.factor(perception$frame_size)
+
+
+```
+
+```{r}
+perception_ttest_df<- perception %>% group_by(frame_size) %>% do(tidy(t.test(.$frame_effect_perception)))
+nice_table(perception_ttest_df)
+```
+
+```{r }
+t.test.results<- nice_t_test(data= perception_summary_by_frame,  "m_pse")
+
+individual_perc_df <-optimized_df %>%
+  select(sid, frame_size, frame_orientation, pse) %>% 
+  pivot_wider(names_from = c(frame_orientation,frame_size), values_from = pse) %>% 
+  mutate(
+    rfi_175 = Right_175 - Left_175,
+    rfi_410 = Right_410 - Left_410,
+    rfi_645 = Right_645 - Left_645,
+    rfi_880 = Right_880 - Left_880) 
+  
+rfi_summary<- individual_perc_df %>%  
+  select(sid,rfi_175,rfi_410,rfi_645,rfi_880) %>% 
+  summarize( mean_175 = mean(rfi_175),
+  sd_175 = sd(rfi_175),
+  mean_410 = mean(rfi_410),
+  sd_410 = sd(rfi_410),
+  mean_645 = mean (rfi_645),
+  mean_880 = mean(rfi_880),
+  sd_880 = sd(rfi_880)
+  )
+
+#Create table to display means and standard deviations for illusion magnitude (effect of frame size on PSE)
+
+rfi_summary_table<-nice_table(rfi_summary)
+rfi_summary_table
+rfi_175_ttest<-t.test(individual_perc_df$rfi_175)
+report::report(rfi_175_ttest)
+rfi_410_ttest<-t.test(individual_perc_df$rfi_410)
+report::report(rfi_410_ttest)
+rfi_645_ttest<-t.test(individual_perc_df$rfi_645)
+report::report(rfi_645_ttest)
+rfi_880_ttest<-t.test(individual_perc_df$rfi_880)
+report::report(rfi_880_ttest)
+
+```
+
+```{r}
+set.seed(1)
+perception<- perception %>% 
+  ungroup()
+ggwithinstats(
+  data = perception,
+  x = frame_size,
+  y = frame_effect_perception,
+  type = "parametric"
+)
+```
+

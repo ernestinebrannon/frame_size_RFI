@@ -1,0 +1,258 @@
+
+```{r setup, include = FALSE, echo= FALSE}
+
+#rm(list=ls())
+library(knitr)
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+library(psych)
+library(ggstatsplot)
+library(papaja)
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+library(effectsize)
+library(flextable)
+library(broom)
+library(report)
+library(doBy)
+library(RColorBrewer)
+library(ggpubr)
+library(ggsignif)
+library(GGally)
+#source("C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/Utilities")
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+```
+
+```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
+optimized_df<-read.csv("C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/optimized_parameters.csv")
+
+
+optimized_df$sid<-gsub("RFT_Sizes_Perception","",optimized_df$sid)
+
+#Load perceptual data
+data_dir_p <-"C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/data/p_results"
+
+sids_p<- list.files(data_dir_p) #subject IDS
+
+p_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_p)) {
+  
+  fname <- list.files(file.path(data_dir_p, sids_p[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  p_tmp_data <- rio::import(paste0(data_dir_p,"/", sids_p[i]), na.strings = c("NULL"))
+  
+  p_tmp_data$sid <- sids_p[i]
+  
+  p_data_raw <- rbind(p_data_raw, p_tmp_data) #has all of data across subjects
+  
+}
+
+
+```
+
+```{r clean perceptual data, include=FALSE, echo=FALSE}
+p_data_clean <- p_data_raw %>%
+  janitor::clean_names() %>%
+  filter(trial_type == "real",
+         !is.na(response),
+         rt <= 4000) %>% 
+  select(sid, everything()) %>% 
+  arrange(sid, trial_number) %>%
+  mutate( # add useful columns
+    # recode frame tilt 
+    frame_orient = ifelse(frame_tilt == "-15", "Left", "Right"),
+    # recode staircase approach
+    stair_approach = ifelse(stringi::stri_sub(trial_variant, -1) == "L", "Left", "Right"))%>%
+  # Parse image name
+  #frame_175_15.png
+  mutate(image_name2 = str_remove(frame_name,"frame"))%>%
+  separate(image_name2, into = c("drop1", "frame_size"), sep = "_|.p") %>% 
+  select(-drop1)
+
+p_sids <- unique(p_data_clean$sid)  # list of participant IDs
+
+```
+
+```{r individual RFI magnitude, include=FALSE,echo=FALSE}
+
+# To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. A positive value indicates that participants PSEs are being biased in the direction of the tilt of the frame. 
+
+
+perception<- optimized_df %>% 
+  group_by(sid,frame_size,frame_orientation) %>% 
+  summarize(m_pse = -mean(pse)) %>% 
+  mutate(frame_orientation=recode(frame_orientation, 'Right'='ccw', 'Left'='cw')) %>% 
+  select(sid, frame_size, frame_orientation, m_pse) %>% 
+  ungroup() %>% 
+  group_by(frame_size, frame_orientation) %>% 
+  pivot_wider(names_from = frame_orientation, values_from = m_pse) %>% 
+  mutate(frame_effect_perception= (cw-ccw)/2)
+
+perception$frame_size<-as.factor(perception$frame_size)
+
+```
+
+
+```{r load and clean rod data as r_data, include=FALSE, echo=FALSE}
+#Load rod data
+data_dir_r <-"C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/data/r_results"
+
+
+sids_r<- list.files(data_dir_r) #subject IDS
+
+r_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_r)) {
+  
+  fname <- list.files(file.path(data_dir_r, sids_r[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  r_tmp_data <- rio::import(paste0(data_dir_r,"/", sids_r[i]), na.strings = c("NULL"))
+  
+  r_tmp_data$sid <- sids_r[i]
+  
+  r_data_raw <- rbind(r_data_raw, r_tmp_data) #has all of data across subjects
+  
+}
+
+r_data <- r_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") %>% 
+  # Parse image name
+  #z_long_rod_5.jpg
+  mutate(rod_tiltjpg = str_remove(ROD_VAL,"z_long_rod_"))%>%
+  mutate(rod_tilt = str_remove(rod_tiltjpg,".jpg")) %>% 
+  select(-rod_tiltjpg)
+
+r_data$rod_tilt<-as.numeric(r_data$rod_tilt)
+
+
+r_data$sid <- substr(r_data$sid, start = 1, stop = 8)
+```
+
+```{r create df with all tasks magnitudes, include=FALSE, echo=FALSE}
+
+
+################get needed Perception columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+perception_abs<- perception %>% 
+  select(sid,frame_size,frame_effect_perception) %>% 
+  # make sure column names are correct (sid, frame_size, magnitude)
+  rename(magnitude = frame_effect_perception) %>%
+  # # add task column, fill all rows with perception
+  mutate(task = "perception") %>% 
+  # #subtract first character from sid
+  mutate(across(c('sid'), substr, 2, nchar(sid))) %>% 
+  mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large'))
+
+# make magnitude is positive 
+perception_abs$magnitude<- -1*(perception_abs$magnitude)
+
+
+################get needed saccade to vertical columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+s2v_abs<- saccade_to_vert_magnitude %>% 
+  select(sid, FRAME_SIZE_VAL,frame_effect_v) %>% 
+  rename(frame_size = FRAME_SIZE_VAL) %>%
+  # add task column, fill all rows with perception
+  mutate(task = "s2v") %>% 
+  #subtract first character from sid
+  mutate(across(c('sid'), substr, 2, nchar(sid)))
+
+
+
+
+################get needed saccade to rod columns
+
+#create a data frame with the illusion magnitude for each task containing just magnitude, sid, frame size
+s2r_abs<- saccade_to_rod_magnitude %>% 
+  select(sid, FRAME_SIZE_VAL,frame_effect_r) %>% 
+  rename(sub_1 = FRAME_SIZE_VAL, sub_2 = sid)
+
+
+#add the magnitude of the saccade tasks together
+saccade_combined<- cbind(s2r_abs,s2v_abs)
+#saccade_combined$frame_effect_r<- -1*(saccade_combined$frame_effect_r)
+
+saccade_combined$task<- "combined_saccade"
+
+saccade_combined<- saccade_combined %>% 
+  select(sid, frame_size, frame_effect_r, frame_effect_v, task) %>% 
+  mutate(magnitude = frame_effect_r+frame_effect_v )%>% 
+  select(sid, frame_size, magnitude,task)
+
+#join by sid
+perc_x_sacc_df <- rbind(perception_abs,saccade_combined)
+
+#make sure task and frame size are factors
+perc_x_sacc_df$task<- as.factor(perc_x_sacc_df$task)
+
+perc_x_sacc_df$frame_size<- as.factor(perc_x_sacc_df$frame_size)
+
+```
+
+```{r combined sacc by perception cor, echo = FALSE}
+#175
+comb_sacc_perc_175<- across_frames %>% 
+  filter(frame_size == "Small")
+
+cor_comb_perc_175<- cor.test(comb_sacc_perc_175$perception,comb_sacc_perc_175$combined_saccade)
+
+#410
+comb_sacc_perc_410<- across_frames %>% 
+  filter(frame_size == "Medium")
+
+cor_comb_perc_410<- cor.test(comb_sacc_perc_410$perception,comb_sacc_perc_410$combined_saccade)
+
+#645
+comb_sacc_perc_645<- across_frames %>% 
+  filter(frame_size == "Large")
+
+cor_comb_perc_645<- cor.test(comb_sacc_perc_645$perception,comb_sacc_perc_645$combined_saccade)
+
+#880
+comb_sacc_perc_880<- across_frames %>% 
+  filter(frame_size == "Extra Large")
+
+cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$combined_saccade)
+
+```
+
+```{r load vertical data as v_data, include=FALSE, echo=FALSE}
+#Load vertical data
+data_dir_v <-"C:/Users/ernes/Dropbox (University of Oregon)/PRDlab/Ernie/FYP/frame_sizes_data_prep/data/v_results"
+
+
+sids_v<- list.files(data_dir_v) #subject IDS
+
+v_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_v)) {
+  
+  fname <- list.files(file.path(data_dir_v, sids_v[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  v_tmp_data <- rio::import(paste0(data_dir_v,"/", sids_v[i]), na.strings = c("NULL"))
+  
+  v_tmp_data$sid <- sids_v[i]
+  
+  v_data_raw <- rbind(v_data_raw, v_tmp_data) #has all of data across subjects
+  
+}
+
+v_data<-v_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") # only use valid trials
+
+v_data$sid <- substr(v_data$sid, start = 1, stop = 8) #clean subject ids
+```

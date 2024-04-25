@@ -1,0 +1,437 @@
+---
+title: "Frame Sizes"
+author: "Ernestine Brannon"
+date: "`r format(Sys.Date(), "%m/%d/%Y")`"
+output: html_document 
+---
+
+```{r setup, include = FALSE, echo= FALSE}
+
+rm(list=ls())
+
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+
+source("./Utilities/PsyFUN_source.R")
+```
+
+```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
+
+#Load perceptual data
+data_dir_p <-"./data/p_results"
+
+sids_p<- list.files(data_dir_p) #subject IDS
+
+p_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_p)) {
+  
+  fname <- list.files(file.path(data_dir_p, sids_p[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  p_tmp_data <- rio::import(paste0(data_dir_p,"/", sids_p[i]), na.strings = c("NULL"))
+  
+  p_tmp_data$sid <- sids_p[i]
+  
+  p_data_raw <- rbind(p_data_raw, p_tmp_data) #has all of data across subjects
+  
+}
+
+optimized_df<-read.csv("optimized_parameters")
+
+```
+
+```{r clean perceptual data, include=FALSE, echo=FALSE}
+
+
+p_data_clean <- p_data_raw %>%
+  janitor::clean_names() %>%
+  filter(trial_type == "real",
+         !is.na(response),
+         rt <= 4000) %>% 
+  select(sid, everything()) %>% 
+  arrange(sid, trial_number) %>%
+  mutate( # add useful columns
+    # recode frame tilt 
+    frame_orient = ifelse(frame_tilt == "-15", "Left", "Right"),
+    # recode staircase approach
+    stair_approach = ifelse(stringi::stri_sub(trial_variant, -1) == "L", "Left", "Right"))%>%
+  # Parse image name
+  #frame_175_15.png
+    mutate(image_name2 = str_remove(frame_name,"frame"))%>%
+  separate(image_name2, into = c("drop1", "frame_size"), sep = "_|.p") %>% 
+  select(-drop1)
+
+p_sids <- unique(p_data_clean$sid)  # list of participant IDs
+
+```
+```{r}
+optimized_df<-read.csv("optimized_parameters")
+
+```
+
+```{r load vertical data as v_data, include=FALSE, echo=FALSE}
+#Load vertical data
+data_dir_v <-"./data/v_results"
+
+
+sids_v<- list.files(data_dir_v) #subject IDS
+
+v_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_v)) {
+  
+  fname <- list.files(file.path(data_dir_v, sids_v[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  v_tmp_data <- rio::import(paste0(data_dir_v,"/", sids_v[i]), na.strings = c("NULL"))
+  
+  v_tmp_data$sid <- sids_v[i]
+  
+  v_data_raw <- rbind(v_data_raw, v_tmp_data) #has all of data across subjects
+  
+}
+
+v_data<-v_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good")
+```
+
+```{r load and clean rod data as r_data, include=FALSE, echo=FALSE}
+#Load rod data
+data_dir_r <-"./data/r_results"
+
+
+sids_r<- list.files(data_dir_r) #subject IDS
+
+r_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_r)) {
+  
+  fname <- list.files(file.path(data_dir_r, sids_r[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  r_tmp_data <- rio::import(paste0(data_dir_r,"/", sids_r[i]), na.strings = c("NULL"))
+  
+  r_tmp_data$sid <- sids_r[i]
+  
+  r_data_raw <- rbind(r_data_raw, r_tmp_data) #has all of data across subjects
+  
+}
+
+r_data <- r_data_raw %>% 
+  filter(TRIAL_OUTCOME=="good") %>% 
+    # Parse image name
+  #z_long_rod_5.jpg
+  mutate(rod_tiltjpg = str_remove(ROD_VAL,"z_long_rod_"))%>%
+  mutate(rod_tilt = str_remove(rod_tiltjpg,".jpg")) %>% 
+  select(-rod_tiltjpg)
+
+r_data$rod_tilt<-as.numeric(r_data$rod_tilt)
+```
+
+
+```{r calculate v error, echo=FALSE,include=FALSE}
+#Performance on each trial was assessed as the difference between true vertical and the angle of rotation of a vector plotted from the fixation point to the final eye position on the response circle. 
+
+f_x <- 960 #fixation point x value
+
+f_y <-  850 # fixation point y value
+
+#Add columns saccade error x and y as sacc_v_error_y and sacc_y_error_x
+v_data_calc<- v_data %>%
+  mutate(
+    sacc_v_error_y = f_y - EYE_Y, #fixationY-saccadeY
+    sacc_v_error_x = EYE_X - f_x, #saccadeX-fix
+    v_error_radians = atan2(sacc_v_error_x,sacc_v_error_y), #returns angle in radians for tangent y/x,
+    v_error = v_error_radians *(180/pi)   #multiply by 180 then divide by pi to get degrees
+    
+  )
+
+sanity<- v_data_calc %>% 
+  select(
+    v_error,v_error_radians,
+    EYE_X
+  )
+
+```
+
+```{r v magnitude for each frame size, include=FALSE, echo = FALSE}
+
+#The magnitude of the errors were averaged across trials for each of frame tilt and frame size 
+
+v_mag<-v_data_calc %>% 
+  group_by(FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(v_m_error = mean(v_error)) %>%
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw'))
+
+```
+
+```{r v frame effect , include = FALSE, echo=FALSE}
+
+#The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame) 
+
+frame_effect_v<- v_mag %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = v_m_error) %>% 
+  mutate(frame_effect_v= (cw-ccw)/2)
+  
+```
+
+
+```{r calculate r errors, include=FALSE, echo=FALSE}
+
+#Difference between the rod’s actual orientation and the rotation of a vector plotted from the fixation point to final eye position on the response circle.
+
+r_data_calc<- r_data %>% 
+  mutate(
+    sacc_r_y = f_y - EYE_Y, 
+    sacc_r_x = EYE_X - f_x,
+    r_saccade = atan2(sacc_r_x,sacc_r_y)*180/pi,
+    r_error = r_saccade - rod_tilt
+    
+  )
+
+```
+
+```{r r magnitude for each frame size/tilt and rod tilt,include=FALSE,echo=FALSE}
+#The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame)
+
+saccade_to_rod_magnitude<-r_data_calc %>% 
+  group_by(sid,FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(m_errors = mean(r_error)) %>% #The magnitude of the errors were averaged across trials for each of frame tilt/ size and  averaged across rod tilts 
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw')) %>% 
+  select(sid, FRAME_SIZE_VAL,FRAME_TILT_VAL, m_errors) %>% 
+  ungroup() %>% 
+  group_by(FRAME_SIZE_VAL,FRAME_TILT_VAL) %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = m_errors) %>% 
+  mutate(frame_effect_r= (cw-ccw)/2)
+
+saccade_to_rod_magnitude$FRAME_SIZE_VAL<-as.factor(saccade_to_rod_magnitude$FRAME_SIZE_VAL)
+
+
+
+```
+
+```{r r magnitude for each frame size, include=FALSE, echo = FALSE}
+
+#The magnitude of the errors were averaged across trials for each of frame tilt/ size and rod tilts 
+
+r_mag<-r_error_framerodtilt %>% 
+  group_by(FRAME_SIZE_VAL, FRAME_TILT_VAL) %>% 
+  summarize(r_m_error = mean(m_errors)) %>% 
+  mutate(FRAME_TILT_VAL=recode(FRAME_TILT_VAL, '-15'='ccw', '15'='cw'))
+
+```
+
+```{r r frame effect , include = FALSE, echo=FALSE}
+
+#The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame) 
+
+
+# To isolate the effect of frame size, we averaged the effect across rod tilts for each frame size
+r_mag$FRAME_SIZE_VAL <- as.factor(r_mag$FRAME_SIZE_VAL)
+
+frame_effect_r<- r_mag %>% 
+  pivot_wider(names_from = FRAME_TILT_VAL, values_from = r_m_error) %>% 
+  mutate(frame_effect_r= (cw-ccw)/2)
+  
+  
+```
+
+```{r}
+# To isolate the effect of frame size, we averaged the effect across rod tilts for each frame size
+
+```
+
+
+```{r Staircase sample plot}
+
+#Select a sample subject
+sample_subj <- p_sids[1]
+
+p_data_clean %>%
+  filter(sid == sample_subj) %>%
+
+  ggplot(aes(trial_iteration_val, rod_tilt)) +
+  geom_line(aes(color = frame_orient, linetype = stair_approach)) +
+
+  # Add points from last six reversals
+  geom_point(data = filter(p_data_clean, sid == sample_subj, reversal == 1, reversal_num > 4),
+             aes(color = frame_orient)) +
+
+  # Add horizontal dashed lines to mark the PSE
+  geom_hline(data = filter(data_pse, sid == sample_subj),
+             aes(yintercept = pse, color = frame_orient)) +
+
+  # Separate plots for each frame size
+  facet_wrap(~frame_size, ncol = 4) +
+
+  # Make nice
+  labs(title = paste0(sample_subj, ": Staircases"),
+       x = "Trial Iteration",
+       y = "Rod Tilt",
+       color = "Frame Tilt",
+       linetype = "Staircase Approach") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+  
+
+```
+
+
+```{r PsyFun fit iteration checking, include=FALSE,echo=FALSE}
+select_sid<-1
+# Initialize an empty data frame to store the results
+sseDF <- data.frame()
+# Loop through each set of parameters in parDF
+
+for (i in 1:nrow(parDF)){
+  p1 <- parDF[i, "pse"]
+  p2 <- parDF[i, "slope"]
+  
+  filter_df<-p_data_clean%>% 
+    filter(sid=="p30217af_RESULTS_FILE.txt",frame_orient =="Right", frame_size == "175") #%>% 
+  # Plot range - rod tilts
+  x_plotlims2 <- -20:20 
+
+  pse_fits <- filter_df %>% 
+    group_by(sid, frame_orient, frame_size) %>%
+    nest() %>% 
+    
+    mutate(psy_fit = map(data, ~optim(par   = c(p1, p2), 
+                                      fn    = psy_fun, 
+                                      x_val = .$rod_tilt,
+                                      rsp   = .$response)),
+         
+         pse       = map_dbl(psy_fit, ~.$par[1]),
+         slope     = map_dbl(psy_fit, ~.$par[2]),
+         residual  = map_dbl(psy_fit, "value"),
+         curve_fit = map(psy_fit, ~psy_plot(x_val = x_plotlims2, c(.$par[1], .$par[2]))),
+         indv_pts  = map(data, ~get_indv_pts(x = .$rod_tilt, y = .$response))
+  ) %>% 
+  
+  arrange(sid, frame_orient, frame_size)
+
+# Create a new row with the current iteration's results
+  new_row <- data.frame(par1 = p1, par2 = p2, sse = pse_fits$residual, pse = pse_fits$pse, slope = pse_fits$slope)
+    
+  # Append the new row to the existing data frame
+  sseDF <- bind_rows(sseDF, new_row)
+}
+
+```
+
+
+```{r frame fit, fig.height = 3, fig.width = 6, warning=FALSE}
+
+ # pick a subject
+sid_select <- 1
+
+pts <- pse_fits %>% 
+  filter(sid == p_sids[i]) %>% 
+  unnest(cols = data) %>%
+  group_by(frame_size, frame_orient,rod_tilt) %>% 
+  summarize(m_rsp = mean(response),
+            n = n()) 
+
+pse_fits %>% 
+  filter(sid == p_sids[sid_select]) %>%
+  select(sid,frame_size, frame_orient, curve_fit) %>% 
+  unnest(cols = curve_fit) %>%
+  
+
+  ggplot() +  
+    geom_line(aes(x = x_val, y = y_val, color = frame_orient), size = 1) +
+    geom_point(data = pts, aes(x = rod_tilt, y = m_rsp, size = n, color = frame_orient),   
+           alpha = .3) +
+  
+    facet_grid(~frame_size) +
+    scale_y_continuous(breaks = c(0, 0.5, 1)) +
+    labs(title = paste0(p_sids[i], ": PsyFun Fits"),
+                x = "Rod Tilt",
+                y = "% Rightward",
+                size = "Trial Count",
+                color = "Frame Tilt")
+  
+```
+
+```{r fit psychometric across subjs }
+#fitting psychometric function across subjects
+data_pse$frame_size<-as.numeric(data_pse$frame_size)
+
+grp_avg <- data_pse %>% 
+  select(sid, frame_size,pse) %>%
+  group_by(frame_size) %>%
+  summarize(m_value = mean(pse),
+            se_value = sd(pse)/ sqrt(length(sid))) 
+
+grp_fits<- grp_avg %>% 
+  nest() %>% 
+  
+  # Fit psychometric function at each frame size for each participant
+  mutate(psy_fit = map(data, ~optim(par   = c(-100, 50, 6),       
+                                    fn    = psy_fun,
+                                    x_val = .$frame_size,
+                                    rsp   = .$m_value)),
+         
+         # Pull out relevant parameters from full solution
+         midpoint = map_dbl(psy_fit, ~.$par[1]),
+         slope = map_dbl(psy_fit, ~.$par[2]),
+         height    = map_dbl(psy_fit, ~.$par[3]),
+         
+         curve_fit = map(psy_fit, ~psy_plot(x_val = x_plotlims2, c(.$par[1], .$par[2], .$par[3]))),
+         indv_pts  = map(data, ~get_indv_pts(x = .$frame_size, y = .$m_value)))
+```
+
+```{r individual RFI magnitude}
+# To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials. A positive value indicates that participants PSEs are being biased in the direction of the tilt of the frame. 
+
+
+perception_summary_by_frame<- best_pars %>% 
+  group_by(frame_size,frame_orientation) %>% 
+  summarize(m_pse = mean(pse),
+            sd_pse = sd(pse))
+
+t.test.results<- nice_t_test(data= perception_summary_by_frame,
+                             "frame_size")
+
+my_table<-nice_table(t.test.results)
+
+individual_perc_df <-best_pars %>%
+  select(sid, frame_size, frame_orientation, pse) %>% 
+  pivot_wider(names_from = c(frame_orientation,frame_size), values_from = pse) %>% 
+  mutate(
+    rfi_175 = Right_175 - Left_175,
+    rfi_410 = Right_410 - Left_410,
+    rfi_645 = Right_645 - Left_645,
+    rfi_880 = Right_880 - Left_880) %>% 
+  select(sid,rfi_175,rfi_410,rfi_645,rfi_880) 
+
+my_table
+```
+
+```{r perc rfi mag}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

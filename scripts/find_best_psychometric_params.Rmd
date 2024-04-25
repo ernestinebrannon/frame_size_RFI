@@ -1,0 +1,394 @@
+---
+title: "Psychometric Parameter Search"
+author: "Ernestine Brannon"
+output: html_document 
+---
+```{r setup, include = FALSE, echo= FALSE}
+
+rm(list=ls())
+
+library(tidyverse)
+library(rstatix)
+library(gridExtra)
+library(rempsyc)
+
+pkgs <- c("effectsize", "flextable", "broom", "report")
+install_if_not_installed(pkgs)
+
+library(effectsize)
+library(flextable)
+library(broom)
+library(report)
+source("./Utilities/PsyFUN_source.R")
+```
+
+```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
+
+#Load perceptual data
+data_dir_p <-"./data/p_results"
+
+sids_p<- list.files(data_dir_p) #subject IDS
+
+p_data_raw<- NULL #empty variable that will be filled through the for loop below
+
+#Bind together all the data across subjects
+for (i in seq_along(sids_p)) {
+  
+  fname <- list.files(file.path(data_dir_p, sids_p[i]), 
+                      pattern = "RESULTS_FILE")#, full.names = TRUE)
+  
+  p_tmp_data <- rio::import(paste0(data_dir_p,"/", sids_p[i]), na.strings = c("NULL"))
+  
+  p_tmp_data$sid <- sids_p[i]
+  
+  p_data_raw <- rbind(p_data_raw, p_tmp_data) #has all of data across subjects
+  
+}
+#optimized_df<-read.csv("optimized_parameters")
+
+```
+
+```{r clean perceptual data, include=FALSE, echo=FALSE}
+
+
+p_data_clean <- p_data_raw %>%
+  janitor::clean_names() %>%
+  filter(trial_type == "real",
+         !is.na(response),
+         rt <= 4000) %>% 
+  select(sid, everything()) %>% 
+  arrange(sid, trial_number) %>%
+  mutate( # add useful columns
+    # recode frame tilt 
+    frame_orient = ifelse(frame_tilt == "-15", "Left", "Right"),
+    # recode staircase approach
+    stair_approach = ifelse(stringi::stri_sub(trial_variant, -1) == "L", "Left", "Right"))%>%
+  # Parse image name
+  #frame_175_15.png
+    mutate(image_name2 = str_remove(frame_name,"frame"))%>%
+  separate(image_name2, into = c("drop1", "frame_size"), sep = "_|.p") %>% 
+  select(-drop1)
+
+p_sids <- unique(p_data_clean$sid)  # list of participant IDs
+
+#
+
+p_data_clean$sid <- substr(p_data_clean$sid, start = 1, stop = 8)
+#p_data_clean<- p_data_clean[-1]
+
+
+```
+
+```{r Random Search Range}
+set.seed(2023)
+#Define iterations and draw numbers 
+n <- 100
+parList <- list()
+
+for (i in 1:n){
+  pse_par <- runif(1, min = -15, max= 15)
+  slope_par <- runif(1, min = 0 , max = 2)
+  parList[[i]] <- c(pse_par, slope_par)
+}
+
+parDF <- do.call(rbind, parList)
+colnames(parDF) <- c("pse", "slope")
+
+```
+
+
+```{r PsyFun fit iteration checking, include=FALSE,echo=FALSE}
+
+# # # Initialize an empty data frame to store the results
+list_of_dfs<-list()
+list_of_parDFs<- list()
+min_sse_parDFs<- list()
+
+
+for( subject in unique(p_data_clean$sid)){ #outermost for loop to interate through subjects
+ for( f_size in unique(p_data_clean$frame_size)){ # for each frame size 
+   for(frame_orientation in unique(p_data_clean$frame_orient)){ #and for each frame orientation
+     sseDF <- data.frame() #empty dataframe to store starting parameters, SSE, and ending parameters for individual subject and condition
+     min_sseDF <- data.frame() # empty dataframe that will store the same info as above, but selecting only the the 10% with the lowest SSE for an individual subject and individual condition
+     
+ # Loop through each set of parameters in parDF
+     for (i in 1:nrow(parDF)){
+ 
+       p1 <- parDF[i, "pse"]
+       p2 <- parDF[i, "slope"]
+       
+       filter_df<-p_data_clean%>% 
+         filter(sid== subject ,frame_orient == frame_orientation, frame_size == f_size) #%>% 
+       # Plot range - rod tilts
+       x_plotlims2 <- -20:20 
+     
+       pse_fits <- filter_df %>% 
+         group_by(sid, frame_orient, frame_size) %>%
+         nest() %>% 
+         
+         mutate(psy_fit = map(data, ~optim(par   = c(p1, p2), 
+                                           fn    = psy_fun, 
+                                           x_val = .$rod_tilt,
+                                           rsp   = .$response)),
+              
+                pse       = map_dbl(psy_fit, ~.$par[1]),
+                slope     = map_dbl(psy_fit, ~.$par[2]),
+                residual  = map_dbl(psy_fit, "value"),
+                curve_fit = map(psy_fit, ~psy_plot(x_val = x_plotlims2, c(.$par[1], .$par[2]))),
+                indv_pts  = map(data, ~get_indv_pts(x = .$rod_tilt, y = .$response))
+         )# %>% 
+         
+          # arrange(sid, frame_orient, frame_size)
+     
+     # # Create a new row with the current iteration's results
+         new_row <- data.frame(par1 = p1, par2 = p2, sse = pse_fits$residual, pse = pse_fits$pse,
+                               slope = pse_fits$slope)
+     #     
+     #   # Append the new row to the existing data frame
+         sseDF <- bind_rows(sseDF, new_row)
+     #   
+         list_of_dfs[[paste0(frame_orientation," ",f_size," ", subject)]]<- sseDF
+          
+   }
+  }    
+ }
+}
+
+
+```
+
+```{r save optimizing parameter iterations dataframes }
+
+for(i in names(list_of_dfs)){
+  write.csv(list_of_dfs[[i]], paste0(i,".csv"))
+}
+```
+
+```{r optimal parameters df}
+optimal_parameters <- function(df){
+ return(as.data.frame(df[which.min(df$sse),]))
+}
+ 
+lapply_pars <- lapply(list_of_dfs, optimal_parameters)
+best_pars <- bind_rows(lapply_pars, .id = "DataFrame_ID")
+rownames(best_pars) <- NULL
+ 
+best_pars <- best_pars %>% 
+ separate_wider_delim(DataFrame_ID," ", names = c("frame_orientation", "frame_size", "sid"))
+
+write.csv(best_pars, "optimized_parameters")
+
+
+
+```
+
+
+```{r individual psychometric plots}
+Individual_curve_fit <- pse_fits %>% 
+  group_by(sid,frame_orient,frame_size ) %>% 
+  dplyr::select(curve_fit) %>% unnest()
+
+Individual_pts<- pse_fits %>% 
+  group_by(sid,frame_orient,frame_size ) %>% 
+  dplyr::select(indv_pts) %>% unnest()
+
+x<-pse_fits$indv_pts %>% 
+  unlist()
+x<- data.frame(x)
+  
+m_rsp<-pse_fits[[10]][[1]]$m_rsp
+
+ggplot()+
+  geom_line(data = Individual_curve_fit, aes(x_val, y_val))+
+  geom_point(data = Individual_pts, aes(x,m_rsp))+
+  labs( title = Individual_curve_fit$sid, subtitle = paste(Individual_curve_fit$frame_orient, " ", Individual_curve_fit$frame_size))
+```
+
+
+
+```{r individual RFI magnitude}
+
+# To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials. A positive value indicates that participants PSEs are being biased in the direction of the tilt of the frame. 
+
+
+perception_summary_by_frame<- optimized_df %>% 
+  group_by(sid,frame_size,frame_orientation) %>%
+  
+  summarize(m_pse = mean(pse),
+            sd_pse = sd(pse))
+  
+
+t.test.results<- nice_t_test(data= perception_summary_by_frame,  "m_pse")
+
+individual_perc_df <-optimized_df %>%
+  select(sid, frame_size, frame_orientation, pse) %>% 
+  pivot_wider(names_from = c(frame_orientation,frame_size), values_from = pse) %>% 
+  mutate(
+    rfi_175 = Right_175 - Left_175,
+    rfi_410 = Right_410 - Left_410,
+    rfi_645 = Right_645 - Left_645,
+    rfi_880 = Right_880 - Left_880) 
+  
+rfi_summary<- individual_perc_df %>%  
+  select(sid,rfi_175,rfi_410,rfi_645,rfi_880) %>% 
+  summarize( mean_175 = mean(rfi_175),
+  sd_175 = sd(rfi_175),
+  mean_410 = mean(rfi_410),
+  sd_410 = sd(rfi_410),
+  mean_645 = mean (rfi_645),
+  mean_880 = mean(rfi_880),
+  sd_880 = sd(rfi_880)
+  )
+
+#Create table to display means and standard deviations for illusion magnitude (effect of frame size on PSE)
+
+rfi_summary_table<-nice_table(rfi_summary)
+rfi_summary_table
+rfi_175_ttest<-t.test(individual_perc_df$rfi_175)
+report::report(rfi_175_ttest)
+rfi_410_ttest<-t.test(individual_perc_df$rfi_410)
+report::report(rfi_410_ttest)
+rfi_645_ttest<-t.test(individual_perc_df$rfi_645)
+report::report(rfi_645_ttest)
+rfi_880_ttest<-t.test(individual_perc_df$rfi_880)
+report::report(rfi_880_ttest)
+
+```
+```{r}
+
+```
+
+```{r PsyFun fit iteration checking, include=FALSE,echo=FALSE}
+# # # Initialize an empty data frame to store the results
+
+
+optimized_parameters$sid <- substr(optimized_parameters$sid, start = 1, stop = 8)
+
+all_pse_fits<-list()
+
+
+for( subject in unique(p_data_clean$sid)){ #outermost for loop to iterate through subjects
+ for( f_size in unique(p_data_clean$frame_size)){ # for each frame size 
+   for(f_orientation in unique(p_data_clean$frame_orient)){ #and for each frame orientation
+     
+     fits<- data.frame()
+     
+     #select the optimized parameters for each subject and condition  
+     opt_parameters<- optimized_parameters %>% 
+         filter(sid == subject, frame_size == f_size, frame_orientation ==f_orientation)
+       p1<- opt_parameters$par1
+       p2<- opt_parameters$par2
+         
+     
+       filter_df<-p_data_clean%>% 
+         filter(sid== subject ,frame_orient == f_orientation, frame_size == f_size) #%>% 
+       # Plot range - rod tilts
+       x_plotlims2 <- -20:20 
+     
+       ind_pse_fits <- filter_df %>% 
+         group_by(sid, frame_orient, frame_size) %>%
+         nest() %>% 
+         
+         mutate(psy_fit = map(data, ~optim(par   = c(p1, p2), 
+                                           fn    = psy_fun, 
+                                           x_val = .$rod_tilt,
+                                           rsp   = .$response)),
+              
+                pse       = map_dbl(psy_fit, ~.$par[1]),
+                slope     = map_dbl(psy_fit, ~.$par[2]),
+                residual  = map_dbl(psy_fit, "value"),
+                curve_fit = map(psy_fit, ~psy_plot(x_val = x_plotlims2, c(.$par[1], .$par[2]))),
+              indv_pts  = map(data, ~get_indv_pts(x = .$rod_tilt, y = .$response))
+       )
+   #Create a new row with the current iteration's results
+       new_row <- data.frame(ind_pse_fits, par1 = p1, par2 = p2, f_orientation=f_orientation, f_size = f_size)
+   #      
+   #   # Append the new row to the existing data frame
+       fits <- bind_rows(fits, new_row)
+   #   
+     all_pse_fits[[paste0(subject, " ",f_orientation," ",f_size)]]<- fits
+        
+
+  }    
+ }
+}
+
+
+```
+
+
+```{r individual psychometric plots}
+#pse_subj<-bind_rows(all_pse_fits, .id = "column_label")
+
+#Calls the unique values for conditions and color 
+combinations <- unique(pse_subj[, c("sid", "frame_orient", "frame_size")])
+
+filter_subj<-pse_subj[5,]
+ 
+  Individual_curve_fit <-filter_subj %>% 
+   group_by(sid,frame_orient,frame_size ) %>% 
+    dplyr::select(curve_fit) %>% unnest()
+  
+  Individual_pts<-filter_subj %>% 
+    group_by(sid,frame_orient,frame_size ) %>% 
+    dplyr::select(indv_pts) %>% unnest()
+  
+  x<-filter_subj$indv_pts %>% 
+    unlist()
+  x<- data.frame(x)
+    
+  #m_rsp<-filter_subj[[11]][[1]]$m_rsp
+  
+  psy_plot<-ggplot()+
+    geom_line(data = Individual_curve_fit, aes(x_val, y_val))+
+    geom_point(data = Individual_pts, aes(x,m_rsp))+
+    labs( title = Individual_curve_fit$sid, subtitle = paste(Individual_curve_fit$frame_orient, " ", Individual_curve_fit$frame_size))+
+    facet_grid(frame_size~frame_orient) 
+```
+```{r}
+#For loop uses the list of unique columns and sets up combinations
+#Calls the unique values for conditions and color 
+combinations <- unique(pse_subj[, c("sid", "frame_orient", "frame_size")])
+
+for (i in 1:nrow(combinations)) {
+
+  combo <- combinations[i, ]
+
+  id <- combo$sid
+
+  frame_size <- combo$frame_size
+
+  frame_orient <- combo$frame_orient
+  
+   
+  Individual_curve_fit <-pse_subj %>%
+    filter(sid ==id) %>% 
+   group_by(sid,frame_orient,frame_size ) %>% 
+    dplyr::select(curve_fit) %>% unnest(cols=curve_fit)
+  
+  Individual_pts<-pse_subj %>% 
+    filter(sid ==id) %>% 
+    group_by(sid,frame_orient,frame_size ) %>% 
+    dplyr::select(indv_pts) %>% unnest(cols = indv_pts)
+  
+  x<-filter_subj$indv_pts %>% 
+    unlist()
+  x<- data.frame(x)
+    psy_plot<-ggplot()+
+    geom_line(data = Individual_curve_fit, aes(x_val, y_val))+
+    geom_point(data = Individual_pts, aes(x,m_rsp))+
+    labs( title = Individual_curve_fit$sid)+
+    facet_grid(frame_size~frame_orient)
+    
+    #Plot saving
+
+  file_name <- paste0(id, "_psychometric.svg")
+
+  sjPlot::save_plot(file_name, psy_plot)
+    }
+
+
+```
+
+
+
