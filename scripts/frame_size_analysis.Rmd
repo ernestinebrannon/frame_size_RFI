@@ -924,8 +924,8 @@ cor_s2v_perc_410
 #645
 s2v_perc_645<- perc_x_s2v_df %>% 
   filter(frame_size == "Large")
-cor_s2v_perc_645
 cor_s2v_perc_645<- cor.test(s2v_perc_645$perception,s2v_perc_645$s2v)
+cor_s2v_perc_645
 
 #880
 s2v_perc_880<- perc_x_s2v_df %>% 
@@ -996,7 +996,6 @@ cor_s2r_perc_410
 #645
 s2r_perc_645<- perc_x_s2r_df %>%
   filter(frame_size =="Large")
-cor_s2r_perc_645
 cor_s2r_perc_645<- cor.test(s2r_perc_645$perception,s2r_perc_645$s2r)
 #report(cor_s2r_perc_645)
 cor_s2r_perc_645
@@ -1021,6 +1020,7 @@ For each frame size a hierarchical design was employed using two models: 1) mode
 - **Small Frame**
 
 ```{r model comparison small frame, echo = FALSE}
+#all_task<- all_task %>% 
 
 
 df_small<- all_task %>% 
