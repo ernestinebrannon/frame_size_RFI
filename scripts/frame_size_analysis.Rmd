@@ -1012,7 +1012,8 @@ cor_s2r_perc_880
 ```{r task by frame size aov, include=FALSE, echo=FALSE}
 task_by_frame<- all_task %>% 
   select(sid, frame_size, vv, oc)
-task_by_frame_long$sid<-as_factor(task_by_frame_long$sid)
+task_by_frame$sid<-as_factor(task_by_frame$sid)
+task_by_frame$oc<-task_by_frame$oc*-1
 
 task_by_frame_long<- task_by_frame%>% 
   pivot_longer(
@@ -1022,7 +1023,9 @@ task_by_frame_long<- task_by_frame%>%
   )
 
 task_by_frame_long$task<- as_factor(task_by_frame_long$task)
+```
 
+```{r task by fram aov and summary stats}
 
 #two way anova task X frame size summary stats
 
