@@ -448,7 +448,7 @@ tukey_p<-tukey_hsd(p_mag_anova)
 apa_table(tukey_p)
 ```
 
-***The results between the table and graph are inconsistent due to different tests being used. I am unsure whether I need to use the Tukey HSD test ( shown in the table above) or if a Bonferroni correction is more appropriate (used in the violin graph below).***
+***The results between the table and graph are inconsistent due to different tests being used. I am unsure whether I need to use the Tukey HSD test ( shown in the table above) or if a Holm-Bonferroni correction is more appropriate (used in the violin graph below).***
 
 ```{r percept repeated measures graph, echo=FALSE}
 set.seed(1)
@@ -1008,6 +1008,36 @@ cor_s2r_perc_880
 
 
 ```
+### Task by Frame Size
+```{r task by frame size aov, include=FALSE, echo=FALSE}
+task_by_frame<- all_task %>% 
+  select(sid, frame_size, vv, oc)
+task_by_frame_long$sid<-as_factor(task_by_frame_long$sid)
+
+task_by_frame_long<- task_by_frame%>% 
+  pivot_longer(
+    cols = c(vv,oc),
+    names_to = "task",
+    values_to = "magnitude"
+  )
+
+task_by_frame_long$task<- as_factor(task_by_frame_long$task)
+
+
+#two way anova task X frame size summary stats
+
+task_by_frame_long %>% 
+  group_by(frame_size,task) %>% 
+  get_summary_stats(magnitude,type = "mean_sd")
+
+#box plot 
+task_frame_bxp<- ggboxplot(
+  task_by_frame_long, x = "frame_size", y = "magnitude", color = "task", pallet ="jco")
+
+task_frame_bxp  
+
+```
+
 
 ### Model Comparison
 
