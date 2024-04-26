@@ -851,7 +851,6 @@ cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$co
 cor_comb_perc_880
 ```
 
-
 ```{r perception and saccade correlation by frame size, echo=FALSE}
 
 corr_perc_sacc<-cor.test(across_frames$perception,across_frames$combined_saccade)  
@@ -1010,17 +1009,15 @@ cor_s2r_perc_880
 
 ```
 
-
-
 ### Model Comparison
 
 For each frame size a hierarchical design was employed using two models: 1) model 1 predicted the overall RFI magnitude  (measured by the perception task) from the visuovestibular effect (measured by the saccade-to-vertical task) and  2) model 2 predicted the overall RFI magnitude from visuovestibular effect and the orientation contrast effect (measured by the saccade-to-rod task). 
 
-- **Small Frame**
+#### Small Frame
 
 ```{r model comparison small frame, echo = FALSE}
-all_task<- all_task %>%
-  mutate( oc = -1*oc)
+#all_task<- all_task %>%
+#  mutate( oc = -1*oc)
 
 
 df_small<- all_task %>% 
@@ -1034,7 +1031,7 @@ model_1_small<- lm(perc~vv, df_small)
 summary(model_1_small)
 
 model_2_small<- lm(perc~ vv +oc, df_small)
-(model_2_small)
+summary(model_2_small)
 
 #change in r squared
 small_rsq_change<- summary(model_2_small)$r.squared - summary(model_1_small)$r.squared
