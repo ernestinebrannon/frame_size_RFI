@@ -1026,7 +1026,8 @@ For each frame size a hierarchical design was employed using two models: 1) mode
 - **Small Frame**
 
 ```{r model comparison small frame, echo = FALSE}
-#all_task<- all_task %>% 
+all_task<- all_task %>%
+  mutate( oc = -1*oc)
 
 
 df_small<- all_task %>% 
