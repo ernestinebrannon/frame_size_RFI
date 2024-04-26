@@ -442,9 +442,10 @@ perc_ttest_table
 
 
 ```{r perc aov frame size effect}
-p_mag_anova<- aov(frame_effect_perception ~frame_size, data =perception)
+p_mag_anova<- aov(frame_effect_r ~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
 summary(p_mag_anova)
 tukey_p<-tukey_hsd(p_mag_anova)
+tukey_p
 apa_table(tukey_p)
 ```
 
@@ -1049,8 +1050,8 @@ For each frame size a hierarchical design was employed using two models: 1) mode
 #### Small Frame
 
 ```{r model comparison small frame, echo = FALSE}
-#all_task<- all_task %>%
-#  mutate( oc = -1*oc)
+all_task<- all_task %>%
+  mutate( oc = -1*oc)
 
 
 df_small<- all_task %>% 
@@ -1157,7 +1158,7 @@ df_xl_across<- df_xl %>%
 model_1_xl<- lm(perc~vv, df_xl)
 summary(model_1_xl)
 model_2_xl<- lm(perc~ vv +oc, df_xl)
-summary(model_1_xl)
+summary(model_2_xl)
 #change in r squared
 xl_rsq_change<- summary(model_2_xl)$r.squared - summary(model_1_xl)$r.squared
 xl_rsq_change
