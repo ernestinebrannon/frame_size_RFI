@@ -667,7 +667,6 @@ s2r_880
 
 ```
 
-
 ```{r s2r within graph, echo=FALSE}
 
 set.seed(1)
