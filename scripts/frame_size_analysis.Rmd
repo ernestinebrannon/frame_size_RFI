@@ -354,38 +354,12 @@ all_task<-all_task %>%
   rename(vv= frame_effect_v,
          oc = frame_effect_r,
          perc = magnitude)
-```
 
-```{r combined sacc by perception cor, echo = FALSE}
 across_frames<- perc_x_sacc_df %>%
   pivot_wider(names_from = task, values_from = magnitude)
 
-
-#175
-comb_sacc_perc_175<- across_frames %>% 
-  filter(frame_size == "Small")
-
-cor_comb_perc_175<- cor.test(comb_sacc_perc_175$perception,comb_sacc_perc_175$combined_saccade)
-cor_comb_perc_175
-#410
-comb_sacc_perc_410<- across_frames %>% 
-  filter(frame_size == "Medium")
-
-cor_comb_perc_410<- cor.test(comb_sacc_perc_410$perception,comb_sacc_perc_410$combined_saccade)
-cor_comb_perc_410
-#645
-comb_sacc_perc_645<- across_frames %>% 
-  filter(frame_size == "Large")
-
-cor_comb_perc_645<- cor.test(comb_sacc_perc_645$perception,comb_sacc_perc_645$combined_saccade)
-cor_comb_perc_645
-#880
-comb_sacc_perc_880<- across_frames %>% 
-  filter(frame_size == "Extra Large")
-
-cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$combined_saccade)
-cor_comb_perc_880
 ```
+
 
 ### Perception Task: RFI
 
@@ -852,6 +826,38 @@ ggplot(across_frames)+
   stat_smooth(method = lm)+
   labs(x = "Perceptual Effect", y ="Combined Visuovestibular and Orientation Contrast Effects" )
 ```
+
+```{r combined sacc by perception cor, echo = FALSE}
+across_frames<- perc_x_sacc_df %>%
+  pivot_wider(names_from = task, values_from = magnitude)
+
+
+#175
+comb_sacc_perc_175<- across_frames %>% 
+  filter(frame_size == "Small")
+
+cor_comb_perc_175<- cor.test(comb_sacc_perc_175$perception,comb_sacc_perc_175$combined_saccade)
+cor_comb_perc_175
+#410
+comb_sacc_perc_410<- across_frames %>% 
+  filter(frame_size == "Medium")
+
+cor_comb_perc_410<- cor.test(comb_sacc_perc_410$perception,comb_sacc_perc_410$combined_saccade)
+cor_comb_perc_410
+#645
+comb_sacc_perc_645<- across_frames %>% 
+  filter(frame_size == "Large")
+
+cor_comb_perc_645<- cor.test(comb_sacc_perc_645$perception,comb_sacc_perc_645$combined_saccade)
+cor_comb_perc_645
+#880
+comb_sacc_perc_880<- across_frames %>% 
+  filter(frame_size == "Extra Large")
+
+cor_comb_perc_880<- cor.test(comb_sacc_perc_880$perception,comb_sacc_perc_880$combined_saccade)
+cor_comb_perc_880
+```
+
 
 ```{r perception and saccade correlation by frame size, echo=FALSE}
 
