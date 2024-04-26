@@ -368,7 +368,7 @@ To determine the change in PSE as a function of frame size, we subtracted the PS
 ~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
 
 ```{r percept summary stat table, echo=FALSE}
-p_descriptives <- perception %>% group_by(perception[2]) %>%
+p_descriptives <- perception %>% group_by(frame_size) %>%
 #  mutate(frame_effect_perception = -1*frame_effect_perception) %>% ## the RFI is multiplied by -1
   summarize(
     Mean = mean(frame_effect_perception)
@@ -1047,7 +1047,7 @@ modelsummary(small_frame_models)
 
 ```
 
-- **Medium Frame**
+####Medium Frame
 
 ```{r model comparison frame 410, echo = FALSE}
 
@@ -1078,7 +1078,7 @@ medium_frame_models<- list("Model 1" = model_1_medium,
 modelsummary(medium_frame_models)
 ```
 
-- **Large Frame**
+####Large Frame
 
 ```{r model comparison frame large, echo= FALSE}
 
@@ -1109,7 +1109,7 @@ large_frame_models<- list("Model 1" = model_1_large,
 modelsummary(large_frame_models)
 ```
 
-- **Extra Large Frame**
+####Extra Large Frame
 
 ```{r model comparison frame 880, echo = FALSE}
 
