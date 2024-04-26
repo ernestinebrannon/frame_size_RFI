@@ -667,18 +667,12 @@ s2r_880
 
 ```
 
- ```{r s2r aov frame size effect}
-# oc_mag_anova<- aov(frame_effect_r~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
-# summary(oc_mag_anova)
-# tukey_oc<-tukey_hsd(oc_mag_anova)
-# apa_table(tukey_oc)
- ```
 
 ```{r s2r within graph, echo=FALSE}
 
 set.seed(1)
 saccade_to_rod_magnitude<- saccade_to_rod_magnitude %>%
-# mutate(frame_effect_r = -1*frame_effect_r) %>% 
+  mutate(frame_effect_r = -1*frame_effect_r) %>% 
   ungroup() %>% 
   mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
 
