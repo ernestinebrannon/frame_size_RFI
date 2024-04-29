@@ -1081,6 +1081,11 @@ modelsummary(small_frame_models)
 
 ```
 
+```{r small oc model}
+oc_small<- lm(perc~ oc, df_small)
+summary(oc_small)
+```
+
 ####Medium Frame
 
 ```{r model comparison frame 410, echo = FALSE}
@@ -1111,6 +1116,11 @@ medium_frame_models<- list("Model 1" = model_1_medium,
                           "Model 2" = model_2_medium)
 modelsummary(medium_frame_models)
 ```
+
+```{r medium oc model}
+oc_medium<- lm(perc~ oc, df_medium)
+summary(oc_medium)
+``` 
 
 ####Large Frame
 
@@ -1143,6 +1153,11 @@ large_frame_models<- list("Model 1" = model_1_large,
 modelsummary(large_frame_models)
 ```
 
+```{r large oc model}
+oc_large<- lm(perc~ oc, df_large)
+summary(oc_large)
+```
+
 ####Extra Large Frame
 
 ```{r model comparison frame 880, echo = FALSE}
@@ -1170,6 +1185,9 @@ xl_frame_models<- list("Model 1" = model_1_xl,
                           "Model 2" = model_2_xl)
 modelsummary(xl_frame_models)
 ```
-
+```{r xl oc model}
+oc_xl<- lm(perc~ oc, df_xl)
+summary(oc_xl)
+```
 
 ### {-}
