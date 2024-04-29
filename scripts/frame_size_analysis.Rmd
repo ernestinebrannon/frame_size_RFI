@@ -44,7 +44,6 @@ f_y <-  850 # fixation point y value
 
 ## Analysis {.tabset}
 
-
 ```{r load perception data as p_data_raw, include=FALSE, echo=FALSE}
 
 optimized_df_file<- here("data","optimized_parameters.csv")
@@ -360,6 +359,55 @@ across_frames<- perc_x_sacc_df %>%
 
 ```
 
+```{r task by frame size for aov, include=FALSE, echo=FALSE}
+task_by_frame<- all_task %>% 
+  select(sid, frame_size, vv, oc)
+task_by_frame$sid<-as_factor(task_by_frame$sid)
+task_by_frame$oc<-task_by_frame$oc*-1
+
+task_by_frame_long<- task_by_frame%>% 
+  pivot_longer(
+    cols = c(vv,oc),
+    names_to = "task",
+    values_to = "magnitude"
+  )
+
+task_by_frame_long$task<- as_factor(task_by_frame_long$task)
+
+#Create dfs for each frame size
+
+all_task<- all_task %>%
+  mutate( oc = -1*oc)
+
+##small frame 
+df_small<- all_task %>% 
+  filter(frame_size == "175")
+
+df_175_across<- df_small %>% 
+  select(-sid, -frame_size)
+
+#medium
+df_medium<- all_task %>% 
+  filter(frame_size == "410")
+
+df_410_across<- df_medium %>% 
+  select(-sid, -frame_size)
+
+#large
+df_large<- all_task %>% 
+  filter(frame_size == "645")
+
+df_large_across<- df_large %>% 
+  select(-sid, -frame_size)
+
+#extra large
+df_xl<- all_task %>% 
+  filter(frame_size == "880")
+
+df_xl_across<- df_xl %>% 
+  select(-sid, -frame_size)
+
+```
 
 ### Perception Task: RFI
 
@@ -479,6 +527,7 @@ gginnards::delete_layers(p_mag, "GeomText")
 
 ```
 
+
 ### Saccade-to-Vertical Task: Visuovestibular Effect
 
 
@@ -594,6 +643,29 @@ ggplot(perc_x_s2v_df)+
 #  ggtitle("Perception and Saccade to Vertical")+
   labs( x = "Perception", y = " Saccade to Vertical")
 
+```
+
+#### Visuvestibular models predicting perceptual effect for each frame size
+
+**Small frame**
+```{r small vv model, echo =FALSE}
+model_1_small<- lm(perc~vv, df_small)
+summary(model_1_small)
+```
+**Medium frame**
+```{r medium vv model, echo=FALSE}
+model_1_medium<- lm(perc~vv, df_medium)
+summary(model_1_medium)
+```
+**Large frame**
+```{r large vv model, echo=FALSE}
+model_1_large<- lm(perc~vv, df_large)
+summary(model_1_large)
+```
+**Extral large frame**
+```{r xl model vv, echo=FALSE}
+model_1_xl<- lm(perc~vv, df_xl)
+summary(model_1_xl)
 ```
 
 
@@ -1010,21 +1082,6 @@ cor_s2r_perc_880
 
 ```
 ### Task by Frame Size
-```{r task by frame size aov, include=FALSE, echo=FALSE}
-task_by_frame<- all_task %>% 
-  select(sid, frame_size, vv, oc)
-task_by_frame$sid<-as_factor(task_by_frame$sid)
-task_by_frame$oc<-task_by_frame$oc*-1
-
-task_by_frame_long<- task_by_frame%>% 
-  pivot_longer(
-    cols = c(vv,oc),
-    names_to = "task",
-    values_to = "magnitude"
-  )
-
-task_by_frame_long$task<- as_factor(task_by_frame_long$task)
-```
 
 ```{r task by fram aov and summary stats}
 
@@ -1042,27 +1099,29 @@ task_frame_bxp
 
 ```
 
-
 ### Model Comparison
 
 For each frame size a hierarchical design was employed using two models: 1) model 1 predicted the overall RFI magnitude  (measured by the perception task) from the visuovestibular effect (measured by the saccade-to-vertical task) and  2) model 2 predicted the overall RFI magnitude from visuovestibular effect and the orientation contrast effect (measured by the saccade-to-rod task). 
 
 #### Small Frame
 
-```{r model comparison small frame, echo = FALSE}
-all_task<- all_task %>%
-  mutate( oc = -1*oc)
+**Perceptual effect predicted by visuovestibular effect**
 
-
-df_small<- all_task %>% 
-  filter(frame_size == "175")
-
-df_175_across<- df_small %>% 
-  select(-sid, -frame_size)
-
-#ggpairs(df_175_across)
-model_1_small<- lm(perc~vv, df_small)
+```{r small vv model summary, echo=FALSE}
 summary(model_1_small)
+```
+
+**Perceptual effect predicted by orientation contrast effect**
+
+```{r small oc model}
+oc_small<- lm(perc~ oc, df_small)
+summary(oc_small)
+```
+
+**Model comparison**
+
+```{r model comparison small frame, echo = FALSE}
+#ggpairs(df_175_across)
 
 model_2_small<- lm(perc~ vv +oc, df_small)
 summary(model_2_small)
@@ -1081,26 +1140,20 @@ modelsummary(small_frame_models)
 
 ```
 
-```{r small oc model}
-oc_small<- lm(perc~ oc, df_small)
-summary(oc_small)
+#### Medium Frame
+
+```{r medium vv model summary,cho = FALSE}
+summary(model_1_medium)
 ```
 
-####Medium Frame
+```{r medium oc model, echo = FALSE}
+oc_medium<- lm(perc~ oc, df_medium)
+summary(oc_medium)
+``` 
 
 ```{r model comparison frame 410, echo = FALSE}
 
-df_medium<- all_task %>% 
-  filter(frame_size == "410")
-
-df_410_across<- df_medium %>% 
-  select(-sid, -frame_size)
-
 #ggpairs(df_410_across)
-
-
-model_1_medium<- lm(perc~vv, df_medium)
-summary(model_1_medium)
 
 model_2_medium<- lm(perc~ vv +oc, df_medium)
 summary(model_2_medium)
@@ -1117,26 +1170,22 @@ medium_frame_models<- list("Model 1" = model_1_medium,
 modelsummary(medium_frame_models)
 ```
 
-```{r medium oc model}
-oc_medium<- lm(perc~ oc, df_medium)
-summary(oc_medium)
-``` 
+#### Large Frame
 
-####Large Frame
+```{r large vv model summary, echo=FALSE}
+summary(model_1_large)
+```
+
+
+```{r large oc model, echo = FALSE}
+oc_large<- lm(perc~ oc, df_large)
+summary(oc_large)
+```
 
 ```{r model comparison frame large, echo= FALSE}
 
-df_large<- all_task %>% 
-  filter(frame_size == "645")
-
-df_large_across<- df_large %>% 
-  select(-sid, -frame_size)
-
 #ggpairs(df_410_across)
 
-
-model_1_large<- lm(perc~vv, df_large)
-summary(model_1_large)
 
 model_2_large<- lm(perc~ vv +oc, df_large)
 summary(model_2_large)
@@ -1153,25 +1202,20 @@ large_frame_models<- list("Model 1" = model_1_large,
 modelsummary(large_frame_models)
 ```
 
-```{r large oc model}
-oc_large<- lm(perc~ oc, df_large)
-summary(oc_large)
+#### Extra Large Frame
+
+```{r xl model vv summary , echo=FALSE}
+summary(model_1_xl)
 ```
 
-####Extra Large Frame
+```{r xl oc model}
+oc_xl<- lm(perc~ oc, df_xl)
+summary(oc_xl)
+```
 
 ```{r model comparison frame 880, echo = FALSE}
-
-df_xl<- all_task %>% 
-  filter(frame_size == "880")
-
-df_xl_across<- df_xl %>% 
-  select(-sid, -frame_size)
-
 #ggpairs(df_880_across)
 
-model_1_xl<- lm(perc~vv, df_xl)
-summary(model_1_xl)
 model_2_xl<- lm(perc~ vv +oc, df_xl)
 summary(model_2_xl)
 #change in r squared
@@ -1184,10 +1228,6 @@ aov_xl
 xl_frame_models<- list("Model 1" = model_1_xl,
                           "Model 2" = model_2_xl)
 modelsummary(xl_frame_models)
-```
-```{r xl oc model}
-oc_xl<- lm(perc~ oc, df_xl)
-summary(oc_xl)
 ```
 
 ### {-}
