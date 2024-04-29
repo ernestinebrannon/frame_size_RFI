@@ -645,7 +645,7 @@ ggplot(perc_x_s2v_df)+
 
 ```
 
-#### Visuvestibular models predicting perceptual effect for each frame size
+#### Visuovestibular models predicting perceptual effect for each frame size
 
 **Small frame**
 ```{r small vv model, echo =FALSE}
@@ -819,6 +819,30 @@ ggplot(perc_x_s2r_df)+
 #  ggtitle("Perception and Saccade to Rod")+
 
 
+```
+
+**Small Frame**
+```{r small oc model}
+oc_small<- lm(perc~ oc, df_small)
+summary(oc_small)
+```
+
+**Medium Frame**
+```{r medium oc model, echo = FALSE}
+oc_medium<- lm(perc~ oc, df_medium)
+summary(oc_medium)
+``` 
+
+**Large Frame**
+```{r large oc model, echo = FALSE}
+oc_large<- lm(perc~ oc, df_large)
+summary(oc_large)
+```
+
+**Extra Large Frame**
+```{r xl oc model, echo=FALSE}
+oc_xl<- lm(perc~ oc, df_xl)
+summary(oc_xl)
 ```
 
 
@@ -1113,12 +1137,14 @@ summary(model_1_small)
 
 **Perceptual effect predicted by orientation contrast effect**
 
-```{r small oc model}
-oc_small<- lm(perc~ oc, df_small)
+```{r small oc model summary, echo=FALSE}
 summary(oc_small)
 ```
 
 **Model comparison**
+
+Model 1: perceptual effect~visuovestibular
+Model 2: perceptual ~ visuovestibular+ orientation contrast
 
 ```{r model comparison small frame, echo = FALSE}
 #ggpairs(df_175_across)
@@ -1142,12 +1168,13 @@ modelsummary(small_frame_models)
 
 #### Medium Frame
 
+**Perceptual effect predicted by visuovestibular effect**
+
 ```{r medium vv model summary,cho = FALSE}
 summary(model_1_medium)
 ```
 
-```{r medium oc model, echo = FALSE}
-oc_medium<- lm(perc~ oc, df_medium)
+```{r medium oc model summary, echo = FALSE}
 summary(oc_medium)
 ``` 
 
@@ -1172,13 +1199,13 @@ modelsummary(medium_frame_models)
 
 #### Large Frame
 
+**Perceptual effect predicted by visuovestibular effect**
+
 ```{r large vv model summary, echo=FALSE}
 summary(model_1_large)
 ```
 
-
-```{r large oc model, echo = FALSE}
-oc_large<- lm(perc~ oc, df_large)
+```{r large oc model summary, echo = FALSE}
 summary(oc_large)
 ```
 
@@ -1204,12 +1231,13 @@ modelsummary(large_frame_models)
 
 #### Extra Large Frame
 
+**Perceptual effect predicted by visuovestibular effect**
+
 ```{r xl model vv summary , echo=FALSE}
 summary(model_1_xl)
 ```
 
-```{r xl oc model}
-oc_xl<- lm(perc~ oc, df_xl)
+```{r xl oc model summary, echo=FALSE}
 summary(oc_xl)
 ```
 
