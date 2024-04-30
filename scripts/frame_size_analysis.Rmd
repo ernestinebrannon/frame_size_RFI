@@ -414,7 +414,7 @@ df_xl_across<- df_xl %>%
 To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. 
 
 ~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
-
+***
 #### Descriptives
 
 ```{r percept summary stat table, echo=FALSE}
@@ -483,6 +483,7 @@ report::report(rfi_880_ttest)
 
 ```
 
+***
 #### T-Tests
 
 ```{r perc ttest against zero, echo=FALSE}
@@ -492,6 +493,8 @@ perc_ttest_table<-nice_table(p_df,
 perc_ttest_table
 ```
 
+
+***
 #### Frame Size ANOVA
 
 ```{r perc aov frame size effect}
@@ -533,11 +536,14 @@ gginnards::delete_layers(p_mag, "GeomText")
 ```
 
 
+
+***
 ### Saccade-to-Vertical Task: Visuovestibular Effect
 
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
 
+***
 #### Descriptives
 
 ```{r s2v summary stat table, echo=FALSE}
@@ -567,6 +573,8 @@ desc_v<-apa_table(
 desc_v
 ```
 
+
+***
 #### T-Tests
 
 ```{r s2v ttest against zero, echo=FALSE}
@@ -580,6 +588,7 @@ s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy
 nice_table(s2v_ttest_df)
 ```
 
+***
 #### Frame Size Ansova
 
 ```{r s2v aov frame size effect}
@@ -621,7 +630,7 @@ gginnards::delete_layers(vv_mag, "StatSummary")
 #   labs(x = "Frame Size", y = "Visuo-vestibular Effect")
 # s2v_bxplt
 ```
-
+***
 #### Correlations for each frame size
 
 ```{r s2v perception correlation by frame graph 1, echo=FALSE}
@@ -656,7 +665,7 @@ ggplot(perc_x_s2v_df)+
   labs( x = "Perception", y = " Saccade to Vertical")
 
 ```
-
+***
 #### Visuovestibular models predicting perceptual effect for each frame size
 
 **Small frame**
@@ -683,10 +692,11 @@ summary(model_1_xl)
 
 
 
+***
 ### Saccade to Rod : Orientation Contrast Effect
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
-
+***
 #### Descriptives
 
 ```{r s2r summary stat table, echo=FALSE}
@@ -716,6 +726,7 @@ desc_r<-apa_table(
 desc_r
 ```
 
+***
 #### T-Test
 
 ```{r s2r ttest table, echo = FALSE}
@@ -758,6 +769,7 @@ s2r_880
 
 ```
 
+***
 #### Frame Size Anova 
 
 ```{r s2r within graph, echo=FALSE}
@@ -800,6 +812,7 @@ gginnards::delete_layers(oc_mag, "StatSummary")
 
 ```
 
+***
 #### Correlations For Each Frame Size
 
 ```{r perception s2r correlation by frame 1, echo=FALSE, fig.dim=c(1,4)}
@@ -843,6 +856,7 @@ ggplot(perc_x_s2r_df)+
 
 ```
 
+***
 #### Linear Models for Each Frame Size
 
 **Small Frame**
@@ -871,10 +885,16 @@ summary(oc_xl)
 
 
 
+***
+### Visuovestibular and Orientation Contrast Effect Correlations
+```{r}
+
+```
+
 ### Combined Saccades and Perception Task Comparison
 
 So far the perceptual and orientation contrast effect were reported as negative numbers, indicating that the perceptual response or saccade erred in the opposite direction of the tilt of the frame. However, it should be noted that for the purpose of making an additive comparison between summed saccade tasks and the perceptual response, we used the inverse value of the OC effect.
-
+***
 #### Descriptives
 
 ```{r summary stats combined, include=FALSE, echo=FALSE}
@@ -911,6 +931,7 @@ perc_x_sacc_desc<- nice_table(perc_x_sacc_df)
 # ```
 ```  
 
+***
 #### Frame Size Anova
 
 ```{r boxplot perception_x_saccade, echo=FALSE}
@@ -933,7 +954,7 @@ perc_sacc_aov<- perc_x_sacc_df %>%
 get_anova_table(perc_sacc_aov)
 
 ```
-
+***
 #### Correlations
 
 ```{r perception and saccade correlation graph, echo=FALSE}
@@ -1060,7 +1081,7 @@ s2v_perc_880<- perc_x_s2v_df %>%
 cor_s2v_perc_880<- cor.test(s2v_perc_880$perception,s2v_perc_880$s2v)
 cor_s2v_perc_880
 ```
-
+***
 **Perception and Saccade-to-Rod**
 
 ```{r perception s2r correlation by frame, echo=FALSE, fig.dim=c(1,4)}
