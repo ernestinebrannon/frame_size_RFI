@@ -578,7 +578,7 @@ s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy
 nice_table(s2v_ttest_df)
 ```
 
-#### Frame Size Ansova
+#### Frame Size Anova
 
 ```{r s2v aov frame size effect}
 vv_mag_anova<- aov(frame_effect_v~FRAME_SIZE_VAL, data =saccade_to_vert_magnitude)
@@ -653,6 +653,59 @@ ggplot(perc_x_s2v_df)+
 #  ggtitle("Perception and Saccade to Vertical")+
   labs( x = "Perception", y = " Saccade to Vertical")
 
+```
+
+```{r, s2v perc corr tests 1, include= FALSE}
+#175
+s2v_perc_175<- perc_x_s2v_df %>% 
+  filter(frame_size =="Small")
+
+cor_s2v_perc_175<- cor.test(s2v_perc_175$perception,s2v_perc_175$s2v)
+cor_s2v_perc_175
+
+#410
+s2v_perc_410<- perc_x_s2v_df %>% 
+  filter(frame_size =="Medium")
+
+cor_s2v_perc_410<- cor.test(s2v_perc_410$perception,s2v_perc_410$s2v)
+cor_s2v_perc_410
+
+#645
+s2v_perc_645<- perc_x_s2v_df %>% 
+  filter(frame_size == "Large")
+cor_s2v_perc_645<- cor.test(s2v_perc_645$perception,s2v_perc_645$s2v)
+cor_s2v_perc_645
+
+#880
+s2v_perc_880<- perc_x_s2v_df %>% 
+  filter(frame_size == "Extra Large")
+
+cor_s2v_perc_880<- cor.test(s2v_perc_880$perception,s2v_perc_880$s2v)
+cor_s2v_perc_880
+```
+
+**Small Frame**
+```{r, s2v perc corr tests small}
+#175
+cor_s2v_perc_175
+```
+
+**Medium Frame**
+```{r, s2v perc corr tests medium}
+#410
+cor_s2v_perc_410
+```
+
+**Large Frame**
+```{r, s2v perc corr tests large}
+#645
+cor_s2v_perc_645
+```
+
+**Extra Large Frame**
+```{r, s2v perc corr tests xl}
+#880
+cor_s2v_perc_880
 ```
 
 #### Visuovestibular models predicting perceptual effect for each frame size
@@ -845,7 +898,7 @@ ggplot(perc_x_s2r_df)+
 
 ```
 
-***
+
 #### Linear Models for Each Frame Size
 
 **Small Frame**
