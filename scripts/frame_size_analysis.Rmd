@@ -713,28 +713,28 @@ cor_s2v_perc_880
 **Small frame**
 
 ```{r small vv model, echo =FALSE}
-model_1_small<- lm(perc~vv, df_small)
+model_1_small<- lm(vv~perc, df_small)
 summary(model_1_small)
 ```
 
 **Medium frame**
 
 ```{r medium vv model, echo=FALSE}
-model_1_medium<- lm(perc~vv, df_medium)
+model_1_medium<- lm(vv~perc, df_medium)
 summary(model_1_medium)
 ```
 
 **Large frame**
 
 ```{r large vv model, echo=FALSE}
-model_1_large<- lm(perc~vv, df_large)
+model_1_large<- lm(vv~perc, df_large)
 summary(model_1_large)
 ```
 
 **Extra large frame**
 
 ```{r xl model vv, echo=FALSE}
-model_1_xl<- lm(perc~vv, df_xl)
+model_1_xl<- lm(vv~perc, df_xl)
 summary(model_1_xl)
 ```
 
