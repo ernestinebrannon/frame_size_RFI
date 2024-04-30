@@ -414,7 +414,7 @@ df_xl_across<- df_xl %>%
 To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. 
 
 ~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
-***
+
 #### Descriptives
 
 ```{r percept summary stat table, echo=FALSE}
@@ -483,7 +483,6 @@ report::report(rfi_880_ttest)
 
 ```
 
-***
 #### T-Tests
 
 ```{r perc ttest against zero, echo=FALSE}
@@ -493,8 +492,6 @@ perc_ttest_table<-nice_table(p_df,
 perc_ttest_table
 ```
 
-
-***
 #### Frame Size ANOVA
 
 ```{r perc aov frame size effect}
@@ -535,15 +532,10 @@ gginnards::delete_layers(p_mag, "GeomText")
 
 ```
 
-
-
-***
 ### Saccade-to-Vertical Task: Visuovestibular Effect
-
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
 
-***
 #### Descriptives
 
 ```{r s2v summary stat table, echo=FALSE}
@@ -573,8 +565,6 @@ desc_v<-apa_table(
 desc_v
 ```
 
-
-***
 #### T-Tests
 
 ```{r s2v ttest against zero, echo=FALSE}
@@ -588,7 +578,6 @@ s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy
 nice_table(s2v_ttest_df)
 ```
 
-***
 #### Frame Size Ansova
 
 ```{r s2v aov frame size effect}
@@ -630,7 +619,7 @@ gginnards::delete_layers(vv_mag, "StatSummary")
 #   labs(x = "Frame Size", y = "Visuo-vestibular Effect")
 # s2v_bxplt
 ```
-***
+
 #### Correlations for each frame size
 
 ```{r s2v perception correlation by frame graph 1, echo=FALSE}
@@ -665,38 +654,41 @@ ggplot(perc_x_s2v_df)+
   labs( x = "Perception", y = " Saccade to Vertical")
 
 ```
-***
+
 #### Visuovestibular models predicting perceptual effect for each frame size
 
 **Small frame**
+
 ```{r small vv model, echo =FALSE}
 model_1_small<- lm(perc~vv, df_small)
 summary(model_1_small)
 ```
+
 **Medium frame**
+
 ```{r medium vv model, echo=FALSE}
 model_1_medium<- lm(perc~vv, df_medium)
 summary(model_1_medium)
 ```
+
 **Large frame**
+
 ```{r large vv model, echo=FALSE}
 model_1_large<- lm(perc~vv, df_large)
 summary(model_1_large)
 ```
-**Extral large frame**
+
+**Extra large frame**
+
 ```{r xl model vv, echo=FALSE}
 model_1_xl<- lm(perc~vv, df_xl)
 summary(model_1_xl)
 ```
 
-
-
-
-***
 ### Saccade to Rod : Orientation Contrast Effect
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
-***
+
 #### Descriptives
 
 ```{r s2r summary stat table, echo=FALSE}
@@ -726,7 +718,6 @@ desc_r<-apa_table(
 desc_r
 ```
 
-***
 #### T-Test
 
 ```{r s2r ttest table, echo = FALSE}
@@ -768,8 +759,6 @@ s2r_880<- report(s2r_880_ttest)
 s2r_880
 
 ```
-
-***
 #### Frame Size Anova 
 
 ```{r s2r within graph, echo=FALSE}
@@ -886,15 +875,114 @@ summary(oc_xl)
 
 
 ***
+
 ### Visuovestibular and Orientation Contrast Effect Correlations
-```{r}
+
+**Small Frame**
+```{r vv oc corr small, echo=FALSE}
+df_small %>% 
+  group_by(sid,frame_size)
+
+small_vv_oc_cor<-cor.test(df_small$oc, df_small$vv)  
+report(small_vv_oc_cor)  
+
+ggplot(df_small)+
+  aes(oc, vv)+
+  geom_point()+
+  stat_smooth(method = lm)+
+  labs(x = "Orientation Contrast Effect", y ="Visuovestibular" )
+
 
 ```
+```{r vv oc corr small rep}
+report(small_vv_oc_cor)
+```
+***
+**Medium Frame**
+```{r vv oc corr medium, echo=FALSE}
+df_medium %>% 
+  group_by(sid,frame_size)
+
+medium_vv_oc_cor<-cor.test(df_medium$oc, df_medium$vv)  
+report(medium_vv_oc_cor)  
+
+ggplot(df_medium)+
+  aes(oc, vv)+
+  geom_point()+
+  stat_smooth(method = lm)+
+  labs(x = "Orientation Contrast Effect", y ="Visuovestibular" )
+
+
+```
+```{r vv oc corr medium rep}
+report(medium_vv_oc_cor)
+```
+***
+**Large Frame**
+```{r vv oc corr large, echo=FALSE}
+df_large %>% 
+  group_by(sid,frame_size)
+
+large_vv_oc_cor<-cor.test(df_large$oc, df_large$vv)  
+report(large_vv_oc_cor)  
+
+ggplot(df_large)+
+  aes(oc, vv)+
+  geom_point()+
+  stat_smooth(method = lm)+
+  labs(x = "Orientation Contrast Effect", y ="Visuovestibular" )
+
+
+```
+```{r vv oc corr large rep}
+report(large_vv_oc_cor)
+```
+***
+**Extra Large Frame**
+```{r vv oc corr xl, echo=FALSE}
+df_xl %>% 
+  group_by(sid,frame_size)
+
+xl_vv_oc_cor<-cor.test(df_xl$oc, df_xl$vv)  
+report(medium_vv_oc_cor)  
+
+ggplot(df_xl)+
+  aes(oc, vv)+
+  geom_point()+
+  stat_smooth(method = lm)+
+  labs(x = "Orientation Contrast Effect", y ="Visuovestibular" )
+
+
+```
+```{r vv oc corr xl rep}
+report(xl_vv_oc_cor)
+```
+***
+**Across Frames**
+```{r vv oc corr across, echo=FALSE}
+all_task %>% 
+  group_by(sid,frame_size)
+
+across_vv_oc_cor<-cor.test(all_task$oc, all_task$vv)  
+report(across_vv_oc_cor)  
+
+ggplot(all_task)+
+  aes(oc, vv)+
+  geom_point()+
+  stat_smooth(method = lm)+
+  labs(x = "Orientation Contrast Effect", y ="Visuovestibular" )
+
+
+```
+```{r vv oc corr across rep}
+report(across_vv_oc_cor)
+```
+
 
 ### Combined Saccades and Perception Task Comparison
 
 So far the perceptual and orientation contrast effect were reported as negative numbers, indicating that the perceptual response or saccade erred in the opposite direction of the tilt of the frame. However, it should be noted that for the purpose of making an additive comparison between summed saccade tasks and the perceptual response, we used the inverse value of the OC effect.
-***
+
 #### Descriptives
 
 ```{r summary stats combined, include=FALSE, echo=FALSE}
@@ -904,34 +992,9 @@ perc_x_sacc_df %>%
 
 perc_x_sacc_desc<- nice_table(perc_x_sacc_df)
 
-# perc_x_sacc_descriptives <- perc_x_sacc_df %>% group_by(frame_size,task) %>%
-#   summarize(
-#     Mean = mean(magnitude)
-#     , Median = median(magnitude)
-#     , SD = sd(magnitude)
-#     , Min = min(magnitude)
-#     , Max = max(magnitude)
-#   ) %>% 
-#   mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
-# 
-# perc_x_sacc_descriptives <- perc_x_sacc_descriptives %>% 
-#   rename("Frame Size"= frame_size)
-#   
-# #p_descriptives[, -1] <- printnum(p_descriptives[, -1])
-# 
-# desc_p_x_sacc<-apa_table(
-#   perc_x_sacc_descriptives
-#   , caption = "Combined Saccade Tasks and Perception Tasks"
-#   , escape = TRUE,
-#   added_stub_head = "Frame Size"
-# )
-# #names(desc_perc)[1]<- "Frame Size"
-# 
-# desc_p_x_sacc
-# ```
 ```  
 
-***
+
 #### Frame Size Anova
 
 ```{r boxplot perception_x_saccade, echo=FALSE}
@@ -954,7 +1017,7 @@ perc_sacc_aov<- perc_x_sacc_df %>%
 get_anova_table(perc_sacc_aov)
 
 ```
-***
+
 #### Correlations
 
 ```{r perception and saccade correlation graph, echo=FALSE}
@@ -974,6 +1037,9 @@ across_frames<- perc_x_sacc_df %>%
   pivot_wider(names_from = task, values_from = magnitude)
 
 
+```
+
+```{r combined cors, echo =FALSE}
 #175
 comb_sacc_perc_175<- across_frames %>% 
   filter(frame_size == "Small")
@@ -1081,7 +1147,7 @@ s2v_perc_880<- perc_x_s2v_df %>%
 cor_s2v_perc_880<- cor.test(s2v_perc_880$perception,s2v_perc_880$s2v)
 cor_s2v_perc_880
 ```
-***
+
 **Perception and Saccade-to-Rod**
 
 ```{r perception s2r correlation by frame, echo=FALSE, fig.dim=c(1,4)}
