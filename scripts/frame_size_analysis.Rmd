@@ -415,6 +415,8 @@ To determine the change in PSE as a function of frame size, we subtracted the PS
 
 ~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
 
+#### Descriptives
+
 ```{r percept summary stat table, echo=FALSE}
 p_descriptives <- perception %>% group_by(frame_size) %>%
 #  mutate(frame_effect_perception = -1*frame_effect_perception) %>% ## the RFI is multiplied by -1
@@ -481,6 +483,8 @@ report::report(rfi_880_ttest)
 
 ```
 
+#### T-Tests
+
 ```{r perc ttest against zero, echo=FALSE}
 p_df<-perception%>% group_by(frame_size) %>% do(tidy(t.test(.$frame_effect_perception)))
 perc_ttest_table<-nice_table(p_df,
@@ -488,6 +492,7 @@ perc_ttest_table<-nice_table(p_df,
 perc_ttest_table
 ```
 
+#### Frame Size ANOVA
 
 ```{r perc aov frame size effect}
 p_mag_anova<- aov(frame_effect_r ~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
@@ -533,6 +538,7 @@ gginnards::delete_layers(p_mag, "GeomText")
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
 
+#### Descriptives
 
 ```{r s2v summary stat table, echo=FALSE}
 s2v_descriptives <- saccade_to_vert_magnitude %>% group_by(saccade_to_vert_magnitude[2]) %>%
@@ -561,6 +567,8 @@ desc_v<-apa_table(
 desc_v
 ```
 
+#### T-Tests
+
 ```{r s2v ttest against zero, echo=FALSE}
 s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_v)))
 s2v_ttest_table<-nice_table(s2v_ttest_df,
@@ -571,6 +579,8 @@ s2v_ttest_table<-nice_table(s2v_ttest_df,
 s2v_ttest_df<-saccade_to_vert_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_v)))
 nice_table(s2v_ttest_df)
 ```
+
+#### Frame Size Ansova
 
 ```{r s2v aov frame size effect}
 vv_mag_anova<- aov(frame_effect_v~FRAME_SIZE_VAL, data =saccade_to_vert_magnitude)
@@ -611,6 +621,8 @@ gginnards::delete_layers(vv_mag, "StatSummary")
 #   labs(x = "Frame Size", y = "Visuo-vestibular Effect")
 # s2v_bxplt
 ```
+
+#### Correlations for each frame size
 
 ```{r s2v perception correlation by frame graph 1, echo=FALSE}
 
@@ -669,9 +681,13 @@ summary(model_1_xl)
 ```
 
 
+
+
 ### Saccade to Rod : Orientation Contrast Effect
 
 The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+
+#### Descriptives
 
 ```{r s2r summary stat table, echo=FALSE}
 s2r_descriptives <- saccade_to_rod_magnitude %>% group_by(saccade_to_rod_magnitude[2]) %>%
@@ -699,6 +715,8 @@ desc_r<-apa_table(
 
 desc_r
 ```
+
+#### T-Test
 
 ```{r s2r ttest table, echo = FALSE}
 s2r_ttest_df<-saccade_to_rod_magnitude %>% group_by(FRAME_SIZE_VAL) %>% do(tidy(t.test(.$frame_effect_r)))
@@ -740,6 +758,8 @@ s2r_880
 
 ```
 
+#### Frame Size Anova 
+
 ```{r s2r within graph, echo=FALSE}
 
 set.seed(1)
@@ -779,6 +799,8 @@ gginnards::delete_layers(oc_mag, "StatSummary")
 
 
 ```
+
+#### Correlations For Each Frame Size
 
 ```{r perception s2r correlation by frame 1, echo=FALSE, fig.dim=c(1,4)}
 
@@ -821,6 +843,8 @@ ggplot(perc_x_s2r_df)+
 
 ```
 
+#### Linear Models for Each Frame Size
+
 **Small Frame**
 ```{r small oc model}
 oc_small<- lm(perc~ oc, df_small)
@@ -846,9 +870,12 @@ summary(oc_xl)
 ```
 
 
+
 ### Combined Saccades and Perception Task Comparison
 
 So far the perceptual and orientation contrast effect were reported as negative numbers, indicating that the perceptual response or saccade erred in the opposite direction of the tilt of the frame. However, it should be noted that for the purpose of making an additive comparison between summed saccade tasks and the perceptual response, we used the inverse value of the OC effect.
+
+#### Descriptives
 
 ```{r summary stats combined, include=FALSE, echo=FALSE}
 perc_x_sacc_df %>%
@@ -884,6 +911,8 @@ perc_x_sacc_desc<- nice_table(perc_x_sacc_df)
 # ```
 ```  
 
+#### Frame Size Anova
+
 ```{r boxplot perception_x_saccade, echo=FALSE}
 psd<- perc_x_sacc_df %>% 
   mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
@@ -904,6 +933,8 @@ perc_sacc_aov<- perc_x_sacc_df %>%
 get_anova_table(perc_sacc_aov)
 
 ```
+
+#### Correlations
 
 ```{r perception and saccade correlation graph, echo=FALSE}
 
@@ -1105,6 +1136,7 @@ cor_s2r_perc_880
 
 
 ```
+
 ### Task by Frame Size
 
 ```{r task by fram aov and summary stats}
@@ -1122,6 +1154,7 @@ task_frame_bxp<- ggboxplot(
 task_frame_bxp  
 
 ```
+
 
 ### Model Comparison
 
@@ -1174,9 +1207,16 @@ modelsummary(small_frame_models)
 summary(model_1_medium)
 ```
 
+**Perceptual effect predicted by orientation contrast effect**
+
 ```{r medium oc model summary, echo = FALSE}
 summary(oc_medium)
 ``` 
+
+**Model comparison**
+
+Model 1: perceptual effect~visuovestibular
+Model 2: perceptual ~ visuovestibular+ orientation contrast
 
 ```{r model comparison frame 410, echo = FALSE}
 
@@ -1205,9 +1245,17 @@ modelsummary(medium_frame_models)
 summary(model_1_large)
 ```
 
+**Perceptual effect predicted by orientation contrast effect**
+
 ```{r large oc model summary, echo = FALSE}
 summary(oc_large)
 ```
+
+**Model comparison**
+
+Model 1: perceptual effect~visuovestibular
+Model 2: perceptual ~ visuovestibular+ orientation contrast
+
 
 ```{r model comparison frame large, echo= FALSE}
 
@@ -1237,9 +1285,17 @@ modelsummary(large_frame_models)
 summary(model_1_xl)
 ```
 
+**Perceptual effect predicted by orientation contrast effect**
+
 ```{r xl oc model summary, echo=FALSE}
 summary(oc_xl)
 ```
+
+**Model comparison**
+
+Model 1: perceptual effect~visuovestibular
+Model 2: perceptual ~ visuovestibular+ orientation contrast
+
 
 ```{r model comparison frame 880, echo = FALSE}
 #ggpairs(df_880_across)
@@ -1257,5 +1313,6 @@ xl_frame_models<- list("Model 1" = model_1_xl,
                           "Model 2" = model_2_xl)
 modelsummary(xl_frame_models)
 ```
+
 
 ### {-}
