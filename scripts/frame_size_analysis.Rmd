@@ -714,28 +714,32 @@ cor_s2v_perc_880
 
 ```{r small vv model, echo =FALSE}
 model_1_small<- lm(vv~perc, df_small)
-summary(model_1_small)
+model_1_small_summary<- summary(model_1_small)
+model_1_small_summary
 ```
 
 **Medium frame**
 
 ```{r medium vv model, echo=FALSE}
 model_1_medium<- lm(vv~perc, df_medium)
-summary(model_1_medium)
+model_1_medium_summary<-summary(model_1_medium)
+model_1_medium_summary
 ```
 
 **Large frame**
 
 ```{r large vv model, echo=FALSE}
 model_1_large<- lm(vv~perc, df_large)
-summary(model_1_large)
+model_1_large_summary<-summary(model_1_large)
+model_1_large_summary
 ```
 
 **Extra large frame**
 
 ```{r xl model vv, echo=FALSE}
 model_1_xl<- lm(vv~perc, df_xl)
-summary(model_1_xl)
+model_1_xl_summary<- summary(model_1_xl)
+model_1_xl_summary
 ```
 
 ### Saccade to Rod : Orientation Contrast Effect
@@ -903,31 +907,31 @@ ggplot(perc_x_s2r_df)+
 
 **Small Frame**
 ```{r small oc model}
-oc_small<- lm(perc~ oc, df_small)
-summary(oc_small)
+oc_small<- lm(oc~perc, df_small)
+oc_small_summary<- summary(oc_small)
+oc_small_summary
 ```
 
 **Medium Frame**
 ```{r medium oc model, echo = FALSE}
-oc_medium<- lm(perc~ oc, df_medium)
-summary(oc_medium)
+oc_medium<- lm(oc~perc, df_medium)
+oc_medium_summary<- summary(oc_medium)
+oc_medium_summary
 ``` 
 
 **Large Frame**
 ```{r large oc model, echo = FALSE}
-oc_large<- lm(perc~ oc, df_large)
-summary(oc_large)
+oc_large<- lm(oc~perc, df_large)
+oc_large_summary<- summary(oc_large)
+oc_large_summary
 ```
 
 **Extra Large Frame**
 ```{r xl oc model, echo=FALSE}
-oc_xl<- lm(perc~ oc, df_xl)
-summary(oc_xl)
+oc_xl<- lm(oc~perc, df_xl)
+oc_xl_summary<- summary(oc_xl)
+oc_xl_summary
 ```
-
-
-
-***
 
 ### Visuovestibular and Orientation Contrast Effect Correlations
 
