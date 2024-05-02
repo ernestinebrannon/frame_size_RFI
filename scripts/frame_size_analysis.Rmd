@@ -12,6 +12,8 @@ output:
 ```{r setup, include = FALSE, echo= FALSE}
 
 #rm(list=ls())
+library(multcompView)
+library(datasets)
 library(here)
 library(knitr)
 library(tidyverse)
@@ -495,14 +497,37 @@ perc_ttest_table
 #### Frame Size ANOVA
 
 ```{r perc aov frame size effect}
-p_mag_anova<- aov(frame_effect_r ~FRAME_SIZE_VAL, data =saccade_to_rod_magnitude)
+p_mag_anova<- aov(frame_effect_perception ~frame_size, data =perception)
 summary(p_mag_anova)
 tukey_p<-tukey_hsd(p_mag_anova)
 tukey_p
 apa_table(tukey_p)
+
+perception_tukey<- TukeyHSD(p_mag_anova)
+print(perception_tukey)
+
+#compact letter display
+cld_p<-multcompLetters4(p_mag_anova, perception_tukey)
+
+print(cld_p)
+
+#table with factors and 3rd quantile
+tk_p <- group_by(perception, frame_size) %>% 
+  summarise(mean=mean(frame_effect_perception), quant = quantile(frame_effect_perception, probs = 0.75)) %>% 
+  arrange(desc(mean))
+
+cld_p<- as.data.frame.list(cld_p$frame_size)
+
+tk_p$cld_p<- cld_p$Letters
+print(tk_p)
+
+ggplot(perception, aes(frame_size, frame_effect_perception))+
+  geom_boxplot(aes(fill=frame_size))+
+  labs(x = "Frame Size (\u00b0)", y= "Perceptual Effect(\u00b0)") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
 ```
 
-***The results between the table and graph are inconsistent due to different tests being used. I am unsure whether I need to use the Tukey HSD test ( shown in the table above) or if a Holm-Bonferroni correction is more appropriate (used in the violin graph below).***
 
 ```{r percept repeated measures graph, echo=FALSE}
 set.seed(1)
