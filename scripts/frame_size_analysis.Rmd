@@ -415,8 +415,6 @@ df_xl_across<- df_xl %>%
 
 To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. 
 
-~~A negative value indicates that participants PSEs are being biased in the opposite direction of the tilt of the frame.~~
-
 #### Descriptives
 
 ```{r percept summary stat table, echo=FALSE}
@@ -536,25 +534,6 @@ perception<- perception %>%
   mutate(magnitude = frame_effect_perception)%>% 
   mutate(frame_size = recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
 
-p_mag<-ggwithinstats(
-  data = perception,
-  x = frame_size,
-  y = magnitude,
-  type = "parametric",
-  xlab = "Frame Size",
-  ylab = "Perceptual Effect",
-  bf.message = FALSE,
-  results.subtitle = FALSE,
-  centrality.path = TRUE,
-  centrality.label.args = list(size = 0,
-  segment.linetype = 0, alpha = 0),
-  ggsignif.args = list(textsize = 0))
-
-gginnards::delete_layers(p_mag, "GeomText")
-
-#gginnards::delete_layers(p_mag, "StatSummary")
-
-
 ```
 
 ### Saccade-to-Vertical Task: Visuovestibular Effect
@@ -618,31 +597,6 @@ saccade_to_vert_magnitude<- saccade_to_vert_magnitude %>%
   ungroup()%>% 
   mutate(FRAME_SIZE_VAL = recode(FRAME_SIZE_VAL, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large' ))
 
-vv_mag<- ggwithinstats(
-  data = saccade_to_vert_magnitude,
-  x = FRAME_SIZE_VAL,
-  y = frame_effect_v,
-  type = "parametric",
-  xlab = "Frame Size",
-  ylab = "Visuo-vestibular Effect",
-  bf.message = FALSE,
-  results.subtitle = FALSE,
-  centrality.path = TRUE,
-  centrality.label.args = list(size = 0,
-  segment.linetype = 0, alpha = 0),
-  ggsignif.args = list(textsize = 0))
-
-#gginnards::delete_layers(vv_mag, "GeomText")
-
-gginnards::delete_layers(vv_mag, "StatSummary")
-
-#vv_mag
-
-
-
-# s2v_bxplt<- ggboxplot(saccade_to_vert_magnitude, x = "FRAME_SIZE_VAL", y = "frame_effect_v")+
-#   labs(x = "Frame Size", y = "Visuo-vestibular Effect")
-# s2v_bxplt
 ```
 
 #### Correlations for each frame size
@@ -857,29 +811,6 @@ summary(oc_mag_anova)
 tukey_oc<-tukey_hsd(oc_mag_anova)
 #summary(tukey_oc)
 apa_table(tukey_oc)
-
-oc_mag<-ggwithinstats(
-  data = saccade_to_rod_magnitude,
-  x = FRAME_SIZE_VAL,
-  y = frame_effect_r,
-  type = "parametric",
-  xlab = "Frame Size",
-  ylab = "Orientation Contrast Effect",
-#  title = "Illusion Magnitude for Saccade-to-Rod Task",
-  bf.message = FALSE,
-  results.subtitle = FALSE,
-  centrality.path = TRUE,
-  centrality.label.args = list(size = 0, segment.linetype = 0, alpha = 0),
-  ggsignif.args = list(textsize = 0))
-
-
-#gginnards::delete_layers(oc_mag, "GeomText")
-
-gginnards::delete_layers(oc_mag, "StatSummary")
-
-#oc_mag
-#extract_stats(oc_mag)
-
 
 ```
 
