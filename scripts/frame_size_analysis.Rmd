@@ -37,7 +37,7 @@ library(GGally)
 library(kableExtra)
 library(flextable)
 library(modelsummary)
-
+library(sjPlot)
 
 f_x <- 960 #fixation point x value
 
@@ -413,7 +413,15 @@ df_xl_across<- df_xl %>%
 
 ### Perception Task: RFI
 
-To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half. 
+To determine the change in PSE as a function of frame size, we subtracted the PSE for counterclockwise trials from clockwise trials, and then divided that by half.
+
+- We observed a significant effect for each of the frame sizes (all p-values<0.001).
+
+- A one-way ANOVA was conducted to evaluate if there was a difference in magnitude between frame sizes, which revealed a main effect of frame size (stats).
+
+- A Tukey post hoc analysis revealed a statistically significant difference the small frame and extra large frame, but no other differences were statistically significant.
+
+
 
 #### Descriptives
 
@@ -492,6 +500,8 @@ perc_ttest_table<-nice_table(p_df,
 perc_ttest_table
 ```
 
+
+
 #### Frame Size ANOVA
 
 ```{r perc aov frame size effect}
@@ -501,6 +511,10 @@ tukey_p<-tukey_hsd(p_mag_anova)
 tukey_p
 apa_table(tukey_p)
 
+```
+
+```{r perception tukey , echo=FALSE}
+
 perception_tukey<- TukeyHSD(p_mag_anova)
 print(perception_tukey)
 
@@ -508,7 +522,6 @@ print(perception_tukey)
 cld_p<-multcompLetters4(p_mag_anova, perception_tukey)
 
 print(cld_p)
-
 #table with factors and 3rd quantile
 tk_p <- group_by(perception, frame_size) %>% 
   summarise(mean=mean(frame_effect_perception), quant = quantile(frame_effect_perception, probs = 0.75)) %>% 
@@ -522,10 +535,12 @@ print(tk_p)
 ggplot(perception, aes(frame_size, frame_effect_perception))+
   geom_boxplot(aes(fill=frame_size))+
   labs(x = "Frame Size (\u00b0)", y= "Perceptual Effect(\u00b0)") + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_text(data = tk_p, aes(x = frame_size, y = quant, label = cld_p), size = 3, vjust=-1, hjust =-1)
+#filename<- "tukey.png"
+#save_plot(filename,tukey_p_plot.png)
 
 ```
-
 
 ```{r percept repeated measures graph, echo=FALSE}
 set.seed(1)
@@ -538,7 +553,12 @@ perception<- perception %>%
 
 ### Saccade-to-Vertical Task: Visuovestibular Effect
 
-The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame.
+
+- We observed a significant effect for each of the frame sizes (all p-values<0.001).
+
+- A one-way ANOVA was conducted to evaluate if there was a difference in magnitude between frame sizes, which revealed no main effect of frame size (stats).
+
 
 #### Descriptives
 
@@ -590,6 +610,30 @@ vv_mag_anova<- aov(frame_effect_v~FRAME_SIZE_VAL, data =saccade_to_vert_magnitud
 tukey_vv<-tukey_hsd(vv_mag_anova)
 apa_table(tukey_vv)
 ```
+
+```{r vv tukey plot, echo=FALSE}
+
+
+vv_tukey<- TukeyHSD(vv_mag_anova)
+print(vv_tukey)
+
+#compact letter display
+cld_v<-multcompLetters4(vv_mag_anova, vv_tukey)
+
+print(cld_v)
+#table with factors and 3rd quantile
+tk_v <- group_by(saccade_to_vert_magnitude, FRAME_SIZE_VAL) %>% 
+  summarise(mean=mean(frame_effect_v), quant = quantile(frame_effect_v, probs = 0.75)) %>% 
+  arrange(desc(mean))
+
+
+ggplot(saccade_to_vert_magnitude, aes(FRAME_SIZE_VAL, frame_effect_v))+
+  geom_boxplot(aes(fill=FRAME_SIZE_VAL))+
+  labs(x = "Frame Size (\u00b0)", y= "Visuovestibular Effect(\u00b0)") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+```
+
 
 ```{r s2v graph, echo=FALSE}
 set.seed(1)
@@ -723,11 +767,19 @@ model_1_xl_summary
 
 ### Saccade to Rod : Orientation Contrast Effect
 
-The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame (negative values indicated eye movements that deviated in the direction opposite the tilt of the frame).
+The effect of the frames was quantified by subtracting the mean errors for the counterclockwise-tilted frames from those of the clockwise-tilted frames then halving this value to get a measure of the average effect of a single frame.
+
+- We observed a significant effect for each of the frame sizes (all p-values<0.001).
+
+- A one-way ANOVA was conducted to evaluate if there was a difference in magnitude between frame sizes, which revealed a main effect of frame size (stats).
+
+- A Tukey post hoc analysis revealed a statistically significant differences between the small frame and each of the other frame sizes.
 
 #### Descriptives
 
 ```{r s2r summary stat table, echo=FALSE}
+saccade_to_rod_magnitude$frame_effect_r<-saccade_to_rod_magnitude$frame_effect_r*-1
+
 s2r_descriptives <- saccade_to_rod_magnitude %>% group_by(saccade_to_rod_magnitude[2]) %>%
   summarize(
     Mean = mean(frame_effect_r)
@@ -813,6 +865,36 @@ tukey_oc<-tukey_hsd(oc_mag_anova)
 apa_table(tukey_oc)
 
 ```
+
+```{r oc tukey , echo=FALSE}
+
+oc_tukey<- TukeyHSD(oc_mag_anova)
+print(oc_tukey)
+
+#compact letter display
+cld_oc<-multcompLetters4(oc_mag_anova, oc_tukey)
+
+print(cld_oc)
+#table with factors and 3rd quantile
+tk_oc <- group_by(saccade_to_rod_magnitude, FRAME_SIZE_VAL) %>% 
+  summarise(mean=mean(frame_effect_r), quant = quantile(frame_effect_r, probs = 0.75)) %>% 
+  arrange(desc(mean))
+
+cld_oc<- as.data.frame.list(cld_oc$FRAME_SIZE_VAL)
+
+tk_oc$cld_oc<- cld_oc$Letters
+print(tk_oc)
+
+ggplot(saccade_to_rod_magnitude, aes(FRAME_SIZE_VAL, frame_effect_r))+
+  geom_boxplot(aes(fill=FRAME_SIZE_VAL))+
+  labs(x = "Frame Size (\u00b0)", y= "Orientation Contrast Effect(\u00b0)") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_text(data = tk_oc, aes(x = FRAME_SIZE_VAL, y = quant, label = cld_oc), size = 3, vjust=-1, hjust =-1)
+#filename<- "tukey.png"
+#save_plot(filename,tukey_p_plot.png)
+
+```
+
 
 ***
 #### Correlations For Each Frame Size
@@ -1096,6 +1178,32 @@ ggplot(across_frames)+
 
 
 ```
+
+```{r all three task correlation, echo = FALSE}
+all_tasks<- all_task %>% 
+  mutate(((frame_size=recode(frame_size, "175" = 'Small', "410" = 'Medium', "645" = 'Large', "880" = 'Extra Large'))))
+
+all_task_corrs<-ggplot(all_task)+ 
+  geom_point(aes(x=perc,y=vv, color = "blue"))+
+  geom_point(aes(x=perc,y=oc, color = "red"))+
+  geom_smooth(aes(x=perc,y=oc, color = "red"), method = "lm")+
+  geom_smooth(aes(x=perc,y=vv, color = "blue"),method="lm")+
+  facet_wrap(~frame_size, nrow=1)+
+#  ggtitle("Perception and Combined Saccade Tasks")+
+  theme(aspect.ratio = 1)+
+  labs(x = "Perception", y = "Saccade Tasks")
+
+all_task_corrs
+
+all_long<-all_task %>% 
+  pivot_longer(names_to = "task", cols = c(vv,oc,perc),values_to = "magnitude")
+
+p <- ggplot(data = all_long, aes(x = frame_size, y = magnitude, colour = task, fill = task))+
+  geom_bar(stat = "identity", width = 1, position = "stack")+
+  facet_grid(. ~ frame_size)
+p
+```
+
 
 **Perception and Saccade-to-Vertical**
 
