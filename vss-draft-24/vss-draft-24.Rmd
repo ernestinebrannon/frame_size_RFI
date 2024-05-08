@@ -1,0 +1,88 @@
+---
+title: Quantifying the Visual Mechanisms of the Rod-and-Frame Illusion
+author:
+  - name: Ernestine Brannon
+    affil: 1
+  - name: Paul Dassonville
+    affil: 1
+affiliation:
+  - num: 1
+    address: Psychology Department, University of Oregon
+column_numbers: 3
+logoright_name: https&#58;//raw.githubusercontent.com/brentthorne/posterdown/master/images/betterhexlogo.png
+logoleft_name: https&#58;//raw.githubusercontent.com/brentthorne/posterdown/master/images/betterhexlogo.png
+output: 
+  posterdown::posterdown_html:
+    self_contained: false
+bibliography: packages.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(multcompView)
+library(readr)
+library(here)
+library(ggplot2)
+library(tidyverse)
+library(rstatix)
+library(papaja)
+across_frames <- read_csv("vss-draft-24_files/across_frames.csv")
+perc_x_s2r_df <- read_csv("vss-draft-24_files/perc_x_s2r.csv")
+perc_x_s2v_df <- read_csv("vss-draft-24_files/perc_x_s2v.csv")
+perc_x_sacc_df <- read_csv("vss-draft-24_files/perc_x_sacc.csv")
+perception<-read_csv("vss-draft-24_files/perception.csv")
+saccade_to_rod_magnitude<-read_csv("vss-draft-24_files/saccade_to_rod_magnitude.csv")
+saccade_to_vert_magnitude<-read_csv("vss-draft-24_files/saccade_to_vert_magnitude.csv")
+```
+
+# Introduction
+
+Our ability to judge the orientation of an object is dependent on the effects of context at multiple levels of processing. In early visual processing, orientation contrast effects can enhance the perceived disparities between edges in the object and surround. In later stages of processing, visuovestibular cues in the environment (edges of window frames, doors, desktops, etc.) provide cues to gravitational vertical that inform the observer’s egocentric reference frame. A combination of these mechanisms is thought to underlie the rod-and-frame illusion (RFI), where the perceived orientation of a line is distorted in the presence of a surrounding, tilted frame. 
+ 
+
+## Objectives
+
+1. Isolate and characterize the visual mechanisms that underly the rod-and-frame illusion.
+2. Compare the perceptual effect of the RFI to separate measures of the visuovestibular distortion and orientation contrast effects at different frame sizes.
+
+
+# Methods
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/task_image.png){width=100%}
+- The overall perceptual effect of the RFI 
+- Visuovestibular distortions were measured in a task that had participants saccade from a fixation point to the “topmost point” on a surrounding response circle, which was itself surrounded by a tilted frame. 
+
+- Orientation contrast effects were measured by having participants saccade from a fixation point to the location where the rod of the RFI would intersect the surrounding response circle if it were extended upward.
+
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/example_task.png)
+
+# Results
+
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/combined-perceptual-box.png){width=100%, height=100%}
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/perception_combined_bar.png){width=100%}
+
+
+
+
+
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/combined_perc_corr.png){width=100%}
+
+![](C:/Users/ernes/Desktop/frame_sizes_data_prep/vss-draft-24/vss-draft-24_files/figure-html/ind_frame_comb_corr.png){width=100%}
+
+# Conclusion
+
+ While the magnitude of the visuovestibular effect remained constant across frame sizes within the range tested here, the orientation contrast effect was greatest for the smallest frame. As predicted, the sum of the separately-measured visuovestibular and orientation contrast effects were found to approximate the overall perceptual effect of the illusion regardless of frame size, and this was true on average as well as when assessing individual differences. These findings support the hypothesis that perceived orientation is affected by both orientation contrast effects and visuovestibular distortions, and that the magnitudes of these effects can be separately quantified with these two saccade tasks.
+
+```{r, include=FALSE}
+knitr::write_bib(c('knitr','rmarkdown','posterdown','pagedown'), 'packages.bib')
+
+```
+
+# Future Direction
+
+Previous research has found that susceptibility to illusion like the RFI are correlated with autistic traits.These methods provide a way to separate the different components of the RFI which,enabling us to quantify the effect of autism on the specific mechanisms of the illusion,which may allow us to better understand how the perceptual systems are affected by autism
+
+# References
+
+
+
+
